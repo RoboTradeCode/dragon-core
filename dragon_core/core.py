@@ -74,7 +74,7 @@ class Core(object):
         )
         self.strategy = SpreadStrategy(
             min_profit=Decimal(config['strategy']['min_profit']),
-            reserve=Decimal(config['strategy']['reserve']),
+            balance_part_to_use=Decimal(config['strategy']['reserve']),
             slippage_limit=Decimal(config['strategy']['slippage_limit']),
             exchange_1_name='binance',
             exchange_2_name='exmo'

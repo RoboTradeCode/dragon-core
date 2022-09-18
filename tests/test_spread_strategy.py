@@ -6,10 +6,19 @@ from dragon_core.spread_strategy import SpreadStrategy
 
 
 class TestSpreadStrategy(TestCase):
-    def test_strategy_simple(self):
+    def test_strategy_creating(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('1.05'),
-            reserve=Decimal('1.0'),
+            balance_part_to_use=Decimal('1.0'),
+            slippage_limit=Decimal('1.5'),
+            exchange_1_name='binance',
+            exchange_2_name='exmo'
+        )
+
+    def test_strategy_update_orderbook(self):
+        strategy = SpreadStrategy(
+            min_profit=Decimal('1.05'),
+            balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1.5'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
@@ -31,15 +40,28 @@ class TestSpreadStrategy(TestCase):
         result = []
         result += strategy.update_orderbook('binance', orderbook)
         self.assertListEqual(result, [], 'Commands present, although not enough data for strategy')
+        self.assertEqual(strategy.exchange_1.orderbook, orderbook)
 
     def test_limit_order_creating(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('1.05'),
-            reserve=Decimal('1.0'),
+            balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
+        balance = {'assets': {
+            'BTC': {
+                'free': 1.5,
+                'used': 0,
+                'total': 1.5
+            },
+            'USDT': {
+                'free': 25000,
+                'used': 0,
+                'total': 25000
+            }
+        }}
         orderbook_1 = {
             'bids': [
                 [Decimal('18400'), Decimal('5')],
@@ -69,6 +91,9 @@ class TestSpreadStrategy(TestCase):
             'timestamp': time.time_ns()
         }
         result = []
+        result += strategy.update_balances('binance', balance)
+        result += strategy.update_balances('exmo', balance)
+        result += strategy.update_orderbook('binance', orderbook_1)
         result += strategy.update_orderbook('binance', orderbook_1)
         result += strategy.update_orderbook('exmo', orderbook_2)
         self.assertEqual(len(result), 1, 'there must be one command from the strategy')
@@ -77,11 +102,23 @@ class TestSpreadStrategy(TestCase):
     def test_cancel_orders(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('1.05'),
-            reserve=Decimal('1.0'),
+            balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
+        balance = {'assets': {
+            'BTC': {
+                'free': 1.5,
+                'used': 0,
+                'total': 1.5
+            },
+            'USDT': {
+                'free': 25000,
+                'used': 0,
+                'total': 25000
+            }
+        }}
         orderbook_1 = {
             'bids': [
                 [Decimal('18400'), Decimal('5')],
@@ -111,6 +148,8 @@ class TestSpreadStrategy(TestCase):
             'timestamp': time.time_ns()
         }
         result = []
+        result += strategy.update_balances('binance', balance)
+        result += strategy.update_balances('exmo', balance)
         result += strategy.update_orderbook('binance', orderbook_1)
         result += strategy.update_orderbook('exmo', orderbook_2)
         result += strategy.update_orderbook('binance', orderbook_2)
@@ -120,11 +159,23 @@ class TestSpreadStrategy(TestCase):
     def test_market_order(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('1.05'),
-            reserve=Decimal('1.0'),
+            balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
+        balance = {'assets': {
+            'BTC': {
+                'free': 1.5,
+                'used': 0,
+                'total': 1.5
+            },
+            'USDT': {
+                'free': 25000,
+                'used': 0,
+                'total': 25000
+            }
+        }}
         orderbook_1 = {
             'bids': [
                 [Decimal('18400'), Decimal('5')],
@@ -154,21 +205,26 @@ class TestSpreadStrategy(TestCase):
             'timestamp': time.time_ns()
         }
         result = []
+        result += strategy.update_balances('binance', balance)
+        result += strategy.update_balances('exmo', balance)
         result += strategy.update_orderbook('binance', orderbook_1)
         result += strategy.update_orderbook('exmo', orderbook_2)
-        result += strategy.update_orders([
-            {
-                'client_order_id': result[0]['data'][0]['client_order_id'],
-                'symbol': 'BTC/USDT',
-                'amount': Decimal('1.50'),
-                'price': Decimal('17000'),
-                'filled': Decimal('1.50'),
-                'status': 'closed',
-                'side': 'buy',
-                'type': 'limit',
-                'info': None
-            }
-        ])
+        result += strategy.update_orders(
+            'binance',
+            [
+                {
+                    'client_order_id': result[0]['data'][0]['client_order_id'],
+                    'symbol': 'BTC/USDT',
+                    'amount': Decimal('1.50'),
+                    'price': Decimal('17000'),
+                    'filled': Decimal('1.50'),
+                    'status': 'closed',
+                    'side': 'buy',
+                    'type': 'limit',
+                    'info': None
+                }
+            ]
+        )
 
         self.assertEqual(len(result), 2, 'there must be two command from the strategy')
         self.assertEqual(result[1].get('action'), 'create_orders', 'there must be create_orders action')

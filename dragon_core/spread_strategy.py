@@ -65,23 +65,9 @@ def predict_price_of_market_buy(quote_asset_amount: Decimal, orderbook: dict) ->
     return filled_amount_in_quote_asset / filled_amount_in_base_asset
 
 
-def check_order_actual(order, orderbook, limit):
-    order_price = order['price']
-    quote_amount = order['price'] * order['amount']
-    if order['side'] == 'sell':
-        predict_price = predict_price_of_market_buy(quote_amount, orderbook)
-        if order_price / predict_price < limit:
-            return False
-    else:
-        predict_price = predict_price_of_market_sell(quote_amount, orderbook)
-        if predict_price / order_price < limit:
-            return False
-    return True
-
-
 class SpreadStrategy(object):
     min_profit: Decimal
-    reserve: Decimal
+    balance_part_to_use: Decimal
     slippage_limit: Decimal
     order_amount_coefficient: Decimal
 
@@ -91,20 +77,21 @@ class SpreadStrategy(object):
 
     def __init__(self,
                  min_profit: Decimal,
-                 reserve: Decimal,
+                 balance_part_to_use: Decimal,
                  slippage_limit: Decimal,
-                 order_amount_coefficient: Decimal,
+                 reserve: Decimal,
                  exchange_1_name,
                  exchange_2_name):
         """
         :param min_profit: минимальный желаемый доход
-        :param reserve: коэффициент резерва ликвидности (от 1)
+        :param balance_part_to_use: какая часть от доступного баланса будет использоваться
+        :param reserve: коэффициент резерва ликвидности (до 1)
         :param slippage_limit: коэффициент изменения цены для “углубление” ордера в ордербук (от 1)
         """
-        self.min_profit = min_profit
         self.reserve = reserve
+        self.min_profit = min_profit
+        self.balance_part_to_use = balance_part_to_use
         self.slippage_limit = slippage_limit
-        self.order_amount_coefficient = order_amount_coefficient
 
         self.exchange_1 = ExchangeState(name=exchange_1_name, limit_order={})
         self.exchange_2 = ExchangeState(name=exchange_2_name, limit_order={})
@@ -149,11 +136,13 @@ class SpreadStrategy(object):
         return commands
 
     def update_balances(self, exchange_name, balances):
+        commands = []
         match exchange_name:
             case self.exchange_1.name:
                 self.exchange_1.balance = balances
             case self.exchange_2.name:
                 self.exchange_2.balance = balances
+        return commands
 
     def monitor_orders(self, exchange_for_limit_order: ExchangeState, exchange_for_market_order: ExchangeState):
         commands = []
@@ -169,7 +158,9 @@ class SpreadStrategy(object):
                 type='market',
                 side='buy' if order['side'] == 'sell' else 'sell'
             ))
-        if not check_order_actual(order, exchange_for_market_order.orderbook, self.slippage_limit):
+        if not check_order_actual(exchange_for_limit_order=exchange_for_limit_order,
+                                  exchange_for_market_order=exchange_for_market_order,
+                                  slippage_limit=self.slippage_limit):
             # отменить ордер
             commands.append(self.cancel_order(
                 exchange=exchange_for_limit_order.name,
@@ -182,29 +173,29 @@ class SpreadStrategy(object):
             return []
         commands = []
         start_time = time.time()
-        commands += self.calculate_buy_limit_order(self.exchange_1, self.exchange_2, Decimal('1.5'))
-        commands += self.calculate_sell_limit_order(self.exchange_1, self.exchange_2, Decimal('1.5'))
-        commands += self.calculate_buy_limit_order(self.exchange_2, self.exchange_1, Decimal('1.5'))
-        commands += self.calculate_sell_limit_order(self.exchange_2, self.exchange_1, Decimal('1.5'))
+        commands += self.calculate_buy_limit_order(self.exchange_1, self.exchange_2)
+        commands += self.calculate_sell_limit_order(self.exchange_1, self.exchange_2)
+        commands += self.calculate_buy_limit_order(self.exchange_2, self.exchange_1)
+        commands += self.calculate_sell_limit_order(self.exchange_2, self.exchange_1)
         print(f'time: {time.time() - start_time:.9f}')
         return commands
 
     def calculate_buy_limit_order(self,
                                   exchange_to_market: ExchangeState,
-                                  exchange_to_limit: ExchangeState,
-                                  amount_in_base_token: Decimal) -> list:
+                                  exchange_to_limit: ExchangeState) -> list:
         """
 
         :param exchange_to_market: состояние биржи для маркет ордера
         :param exchange_to_limit: состояние биржи для лимит ордера
-        :param amount_in_base_token: размер расчетного ордера в base_amount (btc)
         :return: список команд
         """
         commands = []
-
-        amount_in_base_token = amount_in_base_token * self.reserve
-
         limit_order_price = exchange_to_limit.orderbook['bids'][0][0]
+
+        if not exchange_to_limit.balance:
+            return []
+
+        amount_in_base_token = self.get_available_amount_to_buy(exchange_to_limit, exchange_to_market)
 
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange_to_market.orderbook)
         market_order_price = market_order_price * self.slippage_limit
@@ -225,10 +216,33 @@ class SpreadStrategy(object):
             exchange_to_limit.limit_order = order['data'][0]
         return commands
 
+    def get_available_amount_to_buy(self, exchange_to_limit, exchange_to_market):
+        amount_in_quote_token = self.get_balance_quote_asset(exchange_to_market)
+        amount_in_exchange_to_market = amount_in_quote_token / exchange_to_market.orderbook['bids'][0][0]
+        amount_in_exchange_to_limit = self.get_balance_base_asset(exchange_to_limit)
+        min_amount = min(amount_in_exchange_to_market, amount_in_exchange_to_limit) * self.balance_part_to_use
+        return min_amount
+
+    def get_available_amount_to_sell(self, exchange_to_limit, exchange_to_market):
+        amount_in_quote_token = self.get_balance_quote_asset(exchange_to_limit)
+        amount_in_exchange_to_limit = amount_in_quote_token / exchange_to_limit.orderbook['asks'][0][0]
+        amount_in_exchange_to_market = self.get_balance_base_asset(exchange_to_market)
+        min_amount = min(amount_in_exchange_to_market, amount_in_exchange_to_limit) * self.balance_part_to_use
+        return min_amount
+
+    def get_balance_base_asset(self, exchange_state):
+        balance = exchange_state.balance['assets'].get(exchange_state.orderbook['symbol'].split('/')[0])
+        free_balance = Decimal(str(balance['free']))
+        return free_balance
+
+    def get_balance_quote_asset(self, exchange_state):
+        balance = exchange_state.balance['assets'].get(exchange_state.orderbook['symbol'].split('/')[1])
+        free_balance = Decimal(str(balance['free']))
+        return free_balance
+
     def calculate_sell_limit_order(self,
                                   exchange_to_market: ExchangeState,
-                                  exchange_to_limit: ExchangeState,
-                                  amount_in_base_token: Decimal) -> list:
+                                  exchange_to_limit: ExchangeState) -> list:
         """
 
         :param exchange_to_market: состояние биржи для маркет ордера
@@ -238,7 +252,10 @@ class SpreadStrategy(object):
         """
         commands = []
 
-        amount_in_base_token = amount_in_base_token * self.reserve
+        if not exchange_to_limit.balance:
+            return []
+
+        amount_in_base_token = self.get_available_amount_to_sell(exchange_to_limit, exchange_to_market)
 
         limit_order_price = exchange_to_limit.orderbook['asks'][0][0]
 
@@ -311,7 +328,7 @@ class SpreadStrategy(object):
 
     def check_position_to_actual(self, exchange_state) -> list:
         commands = []
-        if not check_order_actual(exchange_state.limit_order, exchange_state.orderbook, self.slippage_limit):
+        if not check_order_actual(exchnage_to_limit=self.exchange_1, exchange_for_market_order=self.exchange_2):
             # отменить ордер
             commands.append(self.cancel_order(
                 exchange=exchange_state.name,
@@ -320,3 +337,26 @@ class SpreadStrategy(object):
             ))
         return commands
 
+    def check_order_actual(self,
+                           exchange_for_limit_order: ExchangeState,
+                           exchange_for_market_order: ExchangeState,
+                           slippage_limit: Decimal):
+        order = exchange_for_limit_order.limit_order
+        orderbook = exchange_for_limit_order.orderbook
+        order_price = order['price']
+        quote_amount = order['price'] * order['amount']
+        if order['side'] == 'sell':
+            predict_price = predict_price_of_market_buy(quote_amount, orderbook)
+            if order_price / predict_price < slippage_limit:
+                return False
+            # проверка на достаточный баланс для совершения завершающей сделки
+            if quote_amount < self.get_balance_quote_asset(exchange_for_market_order) * self.reserve:
+                return False
+        else:
+            predict_price = predict_price_of_market_sell(quote_amount, orderbook)
+            if predict_price / order_price < slippage_limit:
+                return False
+            # проверка на достаточный баланс для совершения завершающей сделки
+            if order['amount'] < self.get_balance_base_asset(exchange_for_market_order) * self.reserve:
+                return False
+        return True
