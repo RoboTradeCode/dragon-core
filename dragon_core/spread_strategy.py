@@ -1,12 +1,16 @@
 import dataclasses
+import logging
+import time
+import uuid
 from decimal import Decimal
 
+
+logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class ExchangeState:
     name: str
     limit_order: dict = None
-    market_order: dict = None
     orderbook: dict = None
     balance: dict = None
 
@@ -36,7 +40,7 @@ def predict_price_of_market_sell(base_asset_amount: Decimal, orderbook: dict):
     return filled_amount_in_quote_asset / filled_amount_in_base_asset
 
 
-def predict_price_of_market_buy(quote_asset_amount: Decimal, orderbook: dict):
+def predict_price_of_market_buy(quote_asset_amount: Decimal, orderbook: dict) -> Decimal:
     """
     Вычислить, по какой цене будет исполнен маркет-ордер на покупку;
     :param quote_asset_amount: объем маркет-ордера;
@@ -63,22 +67,35 @@ def predict_price_of_market_buy(quote_asset_amount: Decimal, orderbook: dict):
 
 def check_order_actual(order, orderbook, limit):
     order_price = order['price']
-    predict_price = predict_price_of_market_buy(order['price'] * order['amount'], orderbook)
-    if abs(order_price / predict_price - 1) > limit:
-        return False
+    quote_amount = order['price'] * order['amount']
+    if order['side'] == 'sell':
+        predict_price = predict_price_of_market_buy(quote_amount, orderbook)
+        if order_price / predict_price < limit:
+            return False
     else:
-        return True
+        predict_price = predict_price_of_market_sell(quote_amount, orderbook)
+        if predict_price / order_price < limit:
+            return False
+    return True
 
 
 class SpreadStrategy(object):
     min_profit: Decimal
     reserve: Decimal
     slippage_limit: Decimal
+    order_amount_coefficient: Decimal
 
-    _orders_to_monitor_1: []
-    _orders_to_monitor_2: []
+    exchange_1: ExchangeState
+    exchange_2: ExchangeState
 
-    def __init__(self, min_profit: Decimal, reserve: Decimal, slippage_limit: Decimal):
+
+    def __init__(self,
+                 min_profit: Decimal,
+                 reserve: Decimal,
+                 slippage_limit: Decimal,
+                 order_amount_coefficient: Decimal,
+                 exchange_1_name,
+                 exchange_2_name):
         """
         :param min_profit: минимальный желаемый доход
         :param reserve: коэффициент резерва ликвидности (от 1)
@@ -87,66 +104,219 @@ class SpreadStrategy(object):
         self.min_profit = min_profit
         self.reserve = reserve
         self.slippage_limit = slippage_limit
+        self.order_amount_coefficient = order_amount_coefficient
 
-    def execute(self, exchange_1: ExchangeState, exchange_2: ExchangeState) -> list[dict]:
-        """
-        Просчитать стратегию. Принимает на вход состояние биржи (балансы, ордербуки, ордера),
-        Возвращает список команд;
-        :param exchange_1: Состояние биржи 1;
-        :param exchange_2: Состояние биржи 2;
-        :return: список команд;
-        """
-        self.monitor_orders(self._orders_to_monitor_1, exchange_1.orderbook)
-        self.monitor_orders(self._orders_to_monitor_2, exchange_2.orderbook)
+        self.exchange_1 = ExchangeState(name=exchange_1_name, limit_order={})
+        self.exchange_2 = ExchangeState(name=exchange_2_name, limit_order={})
 
-        if not self._orders_to_monitor_1:
-            # получаем лимитный ордер
-            limit_order_to_buy_on_exchange_1 = self.calculate_buy_limit_order(exchange_1, exchange_2)
-            if limit_order_to_buy_on_exchange_1 is not None:
-                self._orders_to_monitor_2.append(limit_order_to_buy_on_exchange_1)
-                # todo создать лимитный ордер
+    def update_orderbook(self, exchange_name: str, orderbook: dict) -> list:
+        commands = []
+        match exchange_name:
+            case self.exchange_1.name:
+                self.exchange_1.orderbook = orderbook
+            case self.exchange_2.name:
+                self.exchange_2.orderbook = orderbook
+            case _:
+                print(f'Unexpected exchange: {exchange_name}')
+                return []
 
-        if not self._orders_to_monitor_2:
-            limit_order_to_buy_on_exchange_2 = self.calculate_buy_limit_order(exchange_1, exchange_2)
-            if limit_order_to_buy_on_exchange_2 is not None:
-                self._orders_to_monitor_1.append(limit_order_to_buy_on_exchange_2)
-                # todo создать лимитный ордер
+        if self.exchange_2.limit_order != {}:
+            commands += self.check_position_to_actual(self.exchange_2)
+        if self.exchange_1.limit_order != {}:
+            commands += self.check_position_to_actual(self.exchange_1)
+        if self.exchange_1.limit_order == {} or self.exchange_2.limit_order == {}:
+            commands += self.execute_spread_strategy()
+        return commands
 
-    def monitor_orders(self, orders_to_monitor: list[dict], orderbook: dict):
-        for order in orders_to_monitor:
-            if order['filled'] > 0:
-                # todo создать маркет ордер
-                ...
-            if not check_order_actual(order, orderbook, self.slippage_limit):
-                # todo отменить ордер
-                ...
+    def update_orders(self, exchange_name: str, orders: list[dict]) -> list[dict]:
+        commands = []
+        for order in orders:
+            # маркет ордер не нужно специально обрабатывать, просто логгирую его
+            if order['type'] == 'market':
+                print(f'Market order: {order}')
+                continue
+            # для лимит ордера нужно пересчитать стратегию
+            order_id = self.exchange_1.limit_order.get('client_order_id', '')
+            client_order_id = order.get('client_order_id', '')
+            if client_order_id == self.exchange_1.limit_order.get('client_order_id', ''):
+                self.exchange_1.limit_order = order
+                commands += self.monitor_orders(self.exchange_1, self.exchange_2)
+            elif client_order_id == self.exchange_2.limit_order.get('client_order_id', ''):
+                self.exchange_2.limit_order = order
+                commands += self.monitor_orders(self.exchange_2, self.exchange_1)
+            else:
+                print(f'Unexpected order: {order}')
+        return commands
+
+    def update_balances(self, exchange_name, balances):
+        match exchange_name:
+            case self.exchange_1.name:
+                self.exchange_1.balance = balances
+            case self.exchange_2.name:
+                self.exchange_2.balance = balances
+
+    def monitor_orders(self, exchange_for_limit_order: ExchangeState, exchange_for_market_order: ExchangeState):
+        commands = []
+        order = exchange_for_limit_order.limit_order
+        if order['filled'] > 0:
+            # создать маркет ордер
+            commands.append(self.create_order(
+                exchange=exchange_for_market_order.name,
+                client_order_id=f'{uuid.uuid4()}|spread_end',
+                symbol=order['symbol'],
+                amount=order['filled'],
+                price=order['price'],
+                type='market',
+                side='buy' if order['side'] == 'sell' else 'sell'
+            ))
+        if not check_order_actual(order, exchange_for_market_order.orderbook, self.slippage_limit):
+            # отменить ордер
+            commands.append(self.cancel_order(
+                exchange=exchange_for_limit_order.name,
+                symbol=order['symbol'],
+                client_order_id=order['client_order_id']
+            ))
+        return commands
+    def execute_spread_strategy(self) -> list[dict]:
+        if self.exchange_1.orderbook is None or self.exchange_2.orderbook is None:
+            return []
+        commands = []
+        start_time = time.time()
+        commands += self.calculate_buy_limit_order(self.exchange_1, self.exchange_2, Decimal('1.5'))
+        commands += self.calculate_sell_limit_order(self.exchange_1, self.exchange_2, Decimal('1.5'))
+        commands += self.calculate_buy_limit_order(self.exchange_2, self.exchange_1, Decimal('1.5'))
+        commands += self.calculate_sell_limit_order(self.exchange_2, self.exchange_1, Decimal('1.5'))
+        print(f'time: {time.time() - start_time:.9f}')
+        return commands
 
     def calculate_buy_limit_order(self,
                                   exchange_to_market: ExchangeState,
                                   exchange_to_limit: ExchangeState,
-                                  amount_in_base_token: Decimal) -> dict | None:
-        # - размер расчетного ордера в base_amount (btc)
-        amount_in_base_token = Decimal('1.5')
-        # - лучшая цена в ордербуке
-        limit_order_price = exchange_to_limit.orderbook['bids'][0][0]
-        #  - учет на “дрожание” ликвидности
+                                  amount_in_base_token: Decimal) -> list:
+        """
+
+        :param exchange_to_market: состояние биржи для маркет ордера
+        :param exchange_to_limit: состояние биржи для лимит ордера
+        :param amount_in_base_token: размер расчетного ордера в base_amount (btc)
+        :return: список команд
+        """
+        commands = []
+
         amount_in_base_token = amount_in_base_token * self.reserve
-        # Находим ликвидность в ордербуке Binance
+
+        limit_order_price = exchange_to_limit.orderbook['bids'][0][0]
+
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange_to_market.orderbook)
         market_order_price = market_order_price * self.slippage_limit
 
-        limit_order_amount_in_quote = amount_in_base_token * limit_order_price
-        market_order_amount_in_quote = amount_in_base_token * market_order_price
-        # Проверяем, что ожидаемый доход от сделки будет больше желаемого (без учета комиссии):
-        if limit_order_amount_in_quote / market_order_amount_in_quote < self.min_profit:
-            print(f'Недостаточная прибыль: '
-                  f'{limit_order_amount_in_quote / market_order_amount_in_quote} < {self.min_profit}')
-            return None
-        # Ставим Buy_Limit_Order на Exmo
-        return {
-            'symbol': exchange_to_limit.orderbook['symbol'],
-            'amount': amount_in_base_token,
-            'price': limit_order_price,
-            'side': 'buy',
-            'type': 'limit'
+        profit = self.calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
+
+        if profit > self.min_profit:
+            order = self.create_order(
+                exchange=exchange_to_limit.name,
+                client_order_id=f'{uuid.uuid4()}|spread_start',
+                symbol=exchange_to_limit.orderbook['symbol'],
+                amount=amount_in_base_token,
+                price=limit_order_price,
+                side='buy',
+                type='limit'
+            )
+            commands.append(order)
+            exchange_to_limit.limit_order = order['data'][0]
+        return commands
+
+    def calculate_sell_limit_order(self,
+                                  exchange_to_market: ExchangeState,
+                                  exchange_to_limit: ExchangeState,
+                                  amount_in_base_token: Decimal) -> list:
+        """
+
+        :param exchange_to_market: состояние биржи для маркет ордера
+        :param exchange_to_limit: состояние биржи для лимит ордера
+        :param amount_in_base_token: размер расчетного ордера в base_amount (btc)
+        :return: список команд
+        """
+        commands = []
+
+        amount_in_base_token = amount_in_base_token * self.reserve
+
+        limit_order_price = exchange_to_limit.orderbook['asks'][0][0]
+
+        market_order_price = predict_price_of_market_buy(amount_in_base_token, exchange_to_market.orderbook)
+        market_order_price = market_order_price * self.slippage_limit
+
+        profit = self.calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
+
+        if profit < self.min_profit:
+            logger.debug(f'Недостаточная прибыль: '
+                  f'{profit} < {self.min_profit}')
+        else:
+            order = self.create_order(
+                exchange=exchange_to_limit.name,
+                client_order_id=f'{uuid.uuid4()}|spread_start',
+                symbol=exchange_to_limit.orderbook['symbol'],
+                amount=amount_in_base_token,
+                price=limit_order_price,
+                side='sell',
+                type='limit'
+            )
+            commands.append(order)
+            exchange_to_limit.limit_order = order['data'][0]
+        return commands
+
+    def calculate_profit(self, base_amount, buy_price, sell_price):
+        buy_amount = base_amount * buy_price
+        sell_amount = base_amount * sell_price
+        profit = sell_amount / buy_amount
+        return profit
+
+    def get_market_sell_order_price(self, amount_in_base_token, exchange):
+        market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange.orderbook)
+        market_order_price = market_order_price * self.slippage_limit
+        return market_order_price
+
+    def get_price_of_buy_market_order(self, amount_in_base_token, exchange):
+        market_order_price = predict_price_of_market_buy(amount_in_base_token, exchange.orderbook)
+        market_order_price = market_order_price * self.slippage_limit
+        return market_order_price
+
+    def cancel_order(self, exchange: str, client_order_id, symbol):
+        order = {
+            'client_order_id': client_order_id,
+            'symbol': symbol,
         }
+        command = {
+            "exchange": exchange,
+            "action": "cancel_orders",
+            "timestamp": time.time_ns(),
+            "data": [order]
+        }
+        return command
+    def create_order(self, exchange: str, client_order_id, symbol, amount, price, side, type: str):
+        order = {
+            'client_order_id': client_order_id,
+            'symbol': symbol,
+            'amount': amount,
+            'price': price,
+            'side': side,
+            'type': type
+        }
+        command = {
+            "exchange": exchange,
+            "action": "create_orders",
+            "timestamp": time.time_ns(),
+            "data": [order]
+        }
+        return command
+
+    def check_position_to_actual(self, exchange_state) -> list:
+        commands = []
+        if not check_order_actual(exchange_state.limit_order, exchange_state.orderbook, self.slippage_limit):
+            # отменить ордер
+            commands.append(self.cancel_order(
+                exchange=exchange_state.name,
+                symbol=exchange_state.limit_order['symbol'],
+                client_order_id=exchange_state.limit_order['client_order_id']
+            ))
+        return commands
+
