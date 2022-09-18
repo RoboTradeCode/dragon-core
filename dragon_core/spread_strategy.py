@@ -171,12 +171,10 @@ class SpreadStrategy(object):
         if self.exchange_1.orderbook is None or self.exchange_2.orderbook is None:
             return []
         commands = []
-        start_time = time.time()
         commands += self.calculate_buy_limit_order(self.exchange_1, self.exchange_2)
         commands += self.calculate_sell_limit_order(self.exchange_1, self.exchange_2)
         commands += self.calculate_buy_limit_order(self.exchange_2, self.exchange_1)
         commands += self.calculate_sell_limit_order(self.exchange_2, self.exchange_1)
-        print(f'time: {time.time() - start_time:.9f}')
         return commands
 
     def calculate_buy_limit_order(self,
