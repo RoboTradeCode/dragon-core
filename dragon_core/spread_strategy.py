@@ -4,8 +4,8 @@ import time
 import uuid
 from decimal import Decimal
 
-
 logger = logging.getLogger(__name__)
+
 
 @dataclasses.dataclass
 class ExchangeState:
@@ -74,7 +74,6 @@ class SpreadStrategy(object):
     exchange_1: ExchangeState
     exchange_2: ExchangeState
 
-
     def __init__(self,
                  min_profit: Decimal,
                  balance_part_to_use: Decimal,
@@ -108,9 +107,9 @@ class SpreadStrategy(object):
                 return []
 
         if self.exchange_2.limit_order != {}:
-            commands += self.check_position_to_actual(self.exchange_2)
+            commands += self.check_position_to_actual(self.exchange_2, self.exchange_1)
         if self.exchange_1.limit_order != {}:
-            commands += self.check_position_to_actual(self.exchange_1)
+            commands += self.check_position_to_actual(self.exchange_1, self.exchange_2)
         if self.exchange_1.limit_order == {} or self.exchange_2.limit_order == {}:
             commands += self.execute_spread_strategy()
         return commands
@@ -158,9 +157,8 @@ class SpreadStrategy(object):
                 type='market',
                 side='buy' if order['side'] == 'sell' else 'sell'
             ))
-        if not check_order_actual(exchange_for_limit_order=exchange_for_limit_order,
-                                  exchange_for_market_order=exchange_for_market_order,
-                                  slippage_limit=self.slippage_limit):
+        if not self.check_order_actual(exchange_for_limit_order=exchange_for_limit_order,
+                                       exchange_for_market_order=exchange_for_market_order):
             # отменить ордер
             commands.append(self.cancel_order(
                 exchange=exchange_for_limit_order.name,
@@ -168,6 +166,7 @@ class SpreadStrategy(object):
                 client_order_id=order['client_order_id']
             ))
         return commands
+
     def execute_spread_strategy(self) -> list[dict]:
         if self.exchange_1.orderbook is None or self.exchange_2.orderbook is None:
             return []
@@ -198,7 +197,6 @@ class SpreadStrategy(object):
         amount_in_base_token = self.get_available_amount_to_buy(exchange_to_limit, exchange_to_market)
 
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange_to_market.orderbook)
-        market_order_price = market_order_price * self.slippage_limit
 
         profit = self.calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
@@ -241,8 +239,8 @@ class SpreadStrategy(object):
         return free_balance
 
     def calculate_sell_limit_order(self,
-                                  exchange_to_market: ExchangeState,
-                                  exchange_to_limit: ExchangeState) -> list:
+                                   exchange_to_market: ExchangeState,
+                                   exchange_to_limit: ExchangeState) -> list:
         """
 
         :param exchange_to_market: состояние биржи для маркет ордера
@@ -260,13 +258,12 @@ class SpreadStrategy(object):
         limit_order_price = exchange_to_limit.orderbook['asks'][0][0]
 
         market_order_price = predict_price_of_market_buy(amount_in_base_token, exchange_to_market.orderbook)
-        market_order_price = market_order_price * self.slippage_limit
 
         profit = self.calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
         if profit < self.min_profit:
             logger.debug(f'Недостаточная прибыль: '
-                  f'{profit} < {self.min_profit}')
+                         f'{profit} < {self.min_profit}')
         else:
             order = self.create_order(
                 exchange=exchange_to_limit.name,
@@ -289,12 +286,12 @@ class SpreadStrategy(object):
 
     def get_market_sell_order_price(self, amount_in_base_token, exchange):
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange.orderbook)
-        market_order_price = market_order_price * self.slippage_limit
+        market_order_price = market_order_price * self.balance_part_to_use
         return market_order_price
 
     def get_price_of_buy_market_order(self, amount_in_base_token, exchange):
         market_order_price = predict_price_of_market_buy(amount_in_base_token, exchange.orderbook)
-        market_order_price = market_order_price * self.slippage_limit
+        market_order_price = market_order_price * self.balance_part_to_use
         return market_order_price
 
     def cancel_order(self, exchange: str, client_order_id, symbol):
@@ -309,6 +306,7 @@ class SpreadStrategy(object):
             "data": [order]
         }
         return command
+
     def create_order(self, exchange: str, client_order_id, symbol, amount, price, side, type: str):
         order = {
             'client_order_id': client_order_id,
@@ -326,37 +324,46 @@ class SpreadStrategy(object):
         }
         return command
 
-    def check_position_to_actual(self, exchange_state) -> list:
+    def check_position_to_actual(self, exchange_for_limit_order, exchange_for_market_order) -> list:
         commands = []
-        if not check_order_actual(exchnage_to_limit=self.exchange_1, exchange_for_market_order=self.exchange_2):
+        if not self.check_order_actual(exchange_for_limit_order=exchange_for_limit_order,
+                                       exchange_for_market_order=exchange_for_market_order):
             # отменить ордер
             commands.append(self.cancel_order(
-                exchange=exchange_state.name,
-                symbol=exchange_state.limit_order['symbol'],
-                client_order_id=exchange_state.limit_order['client_order_id']
+                exchange=exchange_for_limit_order.name,
+                symbol=exchange_for_limit_order.limit_order['symbol'],
+                client_order_id=exchange_for_limit_order.limit_order['client_order_id']
             ))
         return commands
 
     def check_order_actual(self,
                            exchange_for_limit_order: ExchangeState,
-                           exchange_for_market_order: ExchangeState,
-                           slippage_limit: Decimal):
+                           exchange_for_market_order: ExchangeState):
         order = exchange_for_limit_order.limit_order
         orderbook = exchange_for_limit_order.orderbook
         order_price = order['price']
-        quote_amount = order['price'] * order['amount']
+        base_amount = order['amount']
+        quote_amount = order_price * base_amount
         if order['side'] == 'sell':
+            # проверка, что сделка выгодная
             predict_price = predict_price_of_market_buy(quote_amount, orderbook)
-            if order_price / predict_price < slippage_limit:
+            if order_price / predict_price < self.min_profit:
                 return False
             # проверка на достаточный баланс для совершения завершающей сделки
-            if quote_amount < self.get_balance_quote_asset(exchange_for_market_order) * self.reserve:
+            if quote_amount * self.reserve > self.get_balance_quote_asset(exchange_for_market_order):
+                return False
+            # проверка на уход вглубь ордербука
+            if orderbook['bids'][0][0] / order_price > self.slippage_limit:
                 return False
         else:
-            predict_price = predict_price_of_market_sell(quote_amount, orderbook)
-            if predict_price / order_price < slippage_limit:
+            # проверка, что сделка выгодная
+            predict_price = predict_price_of_market_sell(base_amount, exchange_for_market_order.orderbook)
+            if predict_price / order_price < self.min_profit:
                 return False
             # проверка на достаточный баланс для совершения завершающей сделки
-            if order['amount'] < self.get_balance_base_asset(exchange_for_market_order) * self.reserve:
+            if base_amount * self.reserve > self.get_balance_base_asset(exchange_for_market_order):
+                return False
+            # проверка на уход вглубь ордербука
+            if abs(order_price / orderbook['asks'][0][0] - 1) > self.slippage_limit:
                 return False
         return True

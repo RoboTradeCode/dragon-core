@@ -11,6 +11,7 @@ class TestSpreadStrategy(TestCase):
             min_profit=Decimal('1.05'),
             balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1.5'),
+            reserve=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -20,6 +21,7 @@ class TestSpreadStrategy(TestCase):
             min_profit=Decimal('1.05'),
             balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1.5'),
+            reserve=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -47,6 +49,7 @@ class TestSpreadStrategy(TestCase):
             min_profit=Decimal('1.05'),
             balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1'),
+            reserve=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -104,6 +107,7 @@ class TestSpreadStrategy(TestCase):
             min_profit=Decimal('1.05'),
             balance_part_to_use=Decimal('1.0'),
             slippage_limit=Decimal('1'),
+            reserve=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -159,8 +163,9 @@ class TestSpreadStrategy(TestCase):
     def test_market_order(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('1.0'),
-            slippage_limit=Decimal('1'),
+            balance_part_to_use=Decimal('0.8'),
+            slippage_limit=Decimal('1.02'),
+            reserve=Decimal('1'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -215,9 +220,9 @@ class TestSpreadStrategy(TestCase):
                 {
                     'client_order_id': result[0]['data'][0]['client_order_id'],
                     'symbol': 'BTC/USDT',
-                    'amount': Decimal('1.50'),
+                    'amount': result[0]['data'][0]['amount'],
                     'price': Decimal('17000'),
-                    'filled': Decimal('1.50'),
+                    'filled': result[0]['data'][0]['amount'],
                     'status': 'closed',
                     'side': 'buy',
                     'type': 'limit',
