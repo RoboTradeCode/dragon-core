@@ -2,26 +2,24 @@ import time
 from decimal import Decimal
 from unittest import TestCase
 
-from dragon_core.spread_strategy import SpreadStrategy
+from dragon_core.strategy.spread_strategy import SpreadStrategy
 
 
 class TestSpreadStrategy(TestCase):
     def test_strategy_creating(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('1.0'),
-            slippage_limit=Decimal('1.5'),
-            reserve=Decimal('1'),
+            min_profit=Decimal('5'),
+            balance_part_to_use=Decimal('100'),
+            depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
 
     def test_strategy_update_orderbook(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('1.0'),
-            slippage_limit=Decimal('1.5'),
-            reserve=Decimal('1'),
+            min_profit=Decimal('5'),
+            balance_part_to_use=Decimal('100'),
+            depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -42,14 +40,13 @@ class TestSpreadStrategy(TestCase):
         result = []
         result += strategy.update_orderbook('binance', orderbook)
         self.assertListEqual(result, [], 'Commands present, although not enough data for strategy')
-        self.assertEqual(strategy.exchange_1.orderbook, orderbook)
+        self.assertEqual(strategy.exchange_1.orderbook['BTC/USDT'], orderbook)
 
     def test_limit_order_creating(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('1.0'),
-            slippage_limit=Decimal('1'),
-            reserve=Decimal('1'),
+            min_profit=Decimal('5'),
+            balance_part_to_use=Decimal('100'),
+            depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -104,10 +101,9 @@ class TestSpreadStrategy(TestCase):
 
     def test_cancel_orders(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('1.0'),
-            slippage_limit=Decimal('1'),
-            reserve=Decimal('1'),
+            min_profit=Decimal('5'),
+            balance_part_to_use=Decimal('100'),
+            depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -162,10 +158,9 @@ class TestSpreadStrategy(TestCase):
 
     def test_market_order(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('1.05'),
-            balance_part_to_use=Decimal('0.8'),
-            slippage_limit=Decimal('1.02'),
-            reserve=Decimal('1'),
+            min_profit=Decimal('5'),
+            balance_part_to_use=Decimal('100'),
+            depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -235,4 +230,5 @@ class TestSpreadStrategy(TestCase):
         self.assertEqual(result[1].get('action'), 'create_orders', 'there must be create_orders action')
         self.assertEqual(result[1]['data'][0].get('type'), 'market', 'there must be market order')
         self.assertEqual(result[1]['data'][0].get('amount'), result[0]['data'][0].get('amount'), 'order amount must be equal')
+        self.assertEqual(strategy.exchange_2.limit_orders, {})
 

@@ -2,7 +2,7 @@ import time
 from decimal import Decimal
 from unittest import TestCase
 
-from dragon_core.spread_strategy import predict_price_of_market_sell, predict_price_of_market_buy
+from dragon_core.strategy.market_order_price_prediction import predict_price_of_market_sell, predict_price_of_market_buy
 
 
 class TestPricePrediction(TestCase):
