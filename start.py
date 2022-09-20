@@ -20,6 +20,8 @@ if subprocess.run('ps -A | grep aeron', shell=True, stdout=None).returncode != 0
 # путь до начальной конфигурации (в ней указан способ получения полной конфигурации)
 BASIC_SETTINGS_PATH = 'settings.toml'
 
+logging.basicConfig(level=logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,11 +43,14 @@ async def load_config():
 
 async def start_core():
     try:
+        logger.info('Starting strategy mt_py')
         config = await load_config()
+        logger.info('Received configuration')
         core = Core(config=config)
+        logger.info('Core created')
         await core.execute()
     except Exception as exception:
-        logger.critical(f'Critical error: {exception}.')
+        logger.critical(f'Critical error: {exception}.', exc_info=True)
         exit(1)
 
 
