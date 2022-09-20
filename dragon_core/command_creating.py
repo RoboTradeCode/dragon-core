@@ -1,5 +1,7 @@
 import time
 
+from dragon_core.utils import time_us
+
 
 def cancel_order(exchange: str, client_order_id, symbol):
     order = {
@@ -9,7 +11,7 @@ def cancel_order(exchange: str, client_order_id, symbol):
     command = {
         "exchange": exchange,
         "action": "cancel_orders",
-        "timestamp": time.time_ns(),
+        "timestamp": time_us(),
         "data": [order]
     }
     return command
@@ -27,7 +29,7 @@ def create_order(exchange: str, client_order_id, symbol, amount, price, side, ty
     command = {
         "exchange": exchange,
         "action": "create_orders",
-        "timestamp": time.time_ns(),
+        "timestamp": time_us(),
         "data": [order]
     }
     return command

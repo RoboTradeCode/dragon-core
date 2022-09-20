@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest import TestCase
 
 from dragon_core.strategy.market_order_price_prediction import predict_price_of_market_sell, predict_price_of_market_buy
+from dragon_core.utils import time_us
 
 
 class TestPricePrediction(TestCase):
@@ -20,7 +21,7 @@ class TestPricePrediction(TestCase):
                 [20000, 3]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = predict_price_of_market_sell(order_amount, orderbook)
         self.assertAlmostEqual(result, 17333, delta=1)
@@ -40,7 +41,7 @@ class TestPricePrediction(TestCase):
                 [20000, 10]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = predict_price_of_market_buy(order_amount, orderbook)
         self.assertAlmostEqual(result, 18200, delta=1)

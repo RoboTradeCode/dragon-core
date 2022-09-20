@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest import TestCase
 
 from dragon_core.strategy.spread_strategy import SpreadStrategy
+from dragon_core.utils import time_us
 
 
 class TestSpreadStrategy(TestCase):
@@ -35,7 +36,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('20000'), Decimal('3')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = []
         result += strategy.update_orderbook('binance', orderbook)
@@ -74,7 +75,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('18900'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         orderbook_2 = {
             'bids': [
@@ -88,7 +89,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('20000'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = []
         result += strategy.update_balances('binance', balance)
@@ -131,7 +132,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('18900'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         orderbook_2 = {
             'bids': [
@@ -145,7 +146,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('20000'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = []
         result += strategy.update_balances('binance', balance)
@@ -188,7 +189,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('18900'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         orderbook_2 = {
             'bids': [
@@ -202,7 +203,7 @@ class TestSpreadStrategy(TestCase):
                 [Decimal('20000'), Decimal('30')]
             ],
             'symbol': 'BTC/USDT',
-            'timestamp': time.time_ns()
+            'timestamp': time_us()
         }
         result = []
         result += strategy.update_balances('binance', balance)
