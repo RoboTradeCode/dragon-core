@@ -1,0 +1,369 @@
+{
+    "exchange":"binance",
+    "node":"configurator",
+    "instance":"mt_py_testing",
+    "algo":"mt_py",
+    "event":"config",
+    "action":"test",
+    "message":"",
+    "timestamp":1663666519199687,
+    "data":{
+        "markets":[
+            {
+                "exchange_symbol":"ETHBTC",
+                "common_symbol":"ETH/BTC",
+                "price_increment":1e-06,
+                "amount_increment":0.0001,
+                "limits":{
+                    "amount":{
+                        "min":0.0001,
+                        "max":100000.0
+                    },
+                    "price":{
+                        "min":1e-06,
+                        "max":922327.0
+                    },
+                    "cost":{
+                        "min":0.0001,
+                        "max":null
+                    },
+                    "leverage":{
+                        "min":null,
+                        "max":null
+                    }
+                },
+                "base_asset":"ETH",
+                "quote_asset":"BTC"
+            },
+            {
+                "exchange_symbol":"BTCUSDT",
+                "common_symbol":"BTC/USDT",
+                "price_increment":0.01,
+                "amount_increment":1e-05,
+                "limits":{
+                    "amount":{
+                        "min":1e-05,
+                        "max":9000.0
+                    },
+                    "price":{
+                        "min":0.01,
+                        "max":1000000.0
+                    },
+                    "cost":{
+                        "min":10.0,
+                        "max":null
+                    },
+                    "leverage":{
+                        "min":null,
+                        "max":null
+                    }
+                },
+                "base_asset":"BTC",
+                "quote_asset":"USDT"
+            },
+            {
+                "exchange_symbol":"ETHUSDT",
+                "common_symbol":"ETH/USDT",
+                "price_increment":0.01,
+                "amount_increment":0.0001,
+                "limits":{
+                    "amount":{
+                        "min":0.0001,
+                        "max":9000.0
+                    },
+                    "price":{
+                        "min":0.01,
+                        "max":1000000.0
+                    },
+                    "cost":{
+                        "min":10.0,
+                        "max":null
+                    },
+                    "leverage":{
+                        "min":null,
+                        "max":null
+                    }
+                },
+                "base_asset":"ETH",
+                "quote_asset":"USDT"
+            }
+        ],
+        "assets_labels":[
+            {
+                "exchange":"ETH",
+                "common":"ETH"
+            },
+            {
+                "exchange":"BTC",
+                "common":"BTC"
+            },
+            {
+                "exchange":"USDT",
+                "common":"USDT"
+            }
+        ],
+        "routes":[
+            [
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"buy"
+                }
+            ],
+            [
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"buy"
+                }
+            ],
+            [
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"sell"
+                }
+            ],
+            [
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"sell"
+                }
+            ],
+            [
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"sell"
+                }
+            ],
+            [
+                {
+                    "source_asset":"ETH",
+                    "common_symbol":"ETH/USDT",
+                    "operation":"sell"
+                },
+                {
+                    "source_asset":"USDT",
+                    "common_symbol":"BTC/USDT",
+                    "operation":"buy"
+                },
+                {
+                    "source_asset":"BTC",
+                    "common_symbol":"ETH/BTC",
+                    "operation":"buy"
+                }
+            ]
+        ],
+        "configs":{
+            "core_config":{
+                "strategy": {
+                    "min_profit": 5,
+                    "balance_part_to_use": 25,
+                    "depth_limit": 2
+                },
+                "exchanges": [
+                    {
+                        "exchange": {
+                            "name": "binance"
+                        },
+                        "aeron": {
+                            "no_subscriber_log_delay": 300,
+                            "publishers": {
+                                "gate": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1004
+                                },
+                                "logs": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1008
+                                }
+                            },
+                            "subscribers": {
+                                "orderbooks": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1006
+                                },
+                                "balances": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1005
+                                },
+                                "orders": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1007
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "exchange": {
+                            "name": "exmo"
+                        },
+                        "aeron": {
+                            "no_subscriber_log_delay": 300,
+                            "publishers": {
+                                "gate": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1004
+                                },
+                                "logs": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1008
+                                }
+                            },
+                            "subscribers": {
+                                "orderbooks": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1006
+                                },
+                                "balances": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1005
+                                },
+                                "orders": {
+                                    "channel": "aeron:ipc",
+                                    "stream_id": 1007
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "gate_config":{
+                "info":{
+                    "node":"gate",
+                    "instance":"sandbox"
+                },
+                "gate":{
+                    "debug_order_info":true,
+                    "order_book_depth":10,
+                    "async_mode":true
+                },
+                "exchange":{
+                    "exchange_id":"binance",
+                    "timeout_ms":10000,
+                    "specific_headers":null,
+                    "credentials":{
+                        "api_key":"GB0mI0S6HTARVIZmv17BrhA0QzDzuBycSD7nPiOoEXLGV2MDCVTijKstle9CZ8S6",
+                        "secret_key":"VMJRFzLJsBYwtb7XRfS0WChfDacJdoblITq1ePVzjxVGQO9KMlIFoG4ni2QCt3ne",
+                        "password":""
+                    },
+                    "accounts":null,
+                    "is_test_keys":true
+                },
+                "data_collection_method":{
+                    "order_book":"rest",
+                    "balance":"ws",
+                    "order":"ws"
+                },
+                "rate_limits":{
+                    "enable_ccxt_rate_limiter":false,
+                    "subscribe_timeout":0,
+                    "fetch_orderbooks":0,
+                    "api_requests_per_seconds":{
+                        "public":{
+                            "order_book":10,
+                            "exchange_rps_limit":10,
+                            "ip_list":[
+                                "172.18.0.1"
+                            ]
+                        },
+                        "private":{
+                            "balance":1,
+                            "order_status":49,
+                            "exchange_rps_limit":100,
+                            "ip_list":[]
+                        }
+                    },
+                    "ip_list":null
+                },
+                "aeron":{
+                    "no_subscriber_log_delay":30,
+                    "publishers":{
+                        "orderbooks":{
+                            "channel":"aeron:ipc",
+                            "stream_id":1006
+                        },
+                        "balances":{
+                            "channel":"aeron:ipc",
+                            "stream_id":1005
+                        },
+                        "core":{
+                            "channel":"aeron:ipc",
+                            "stream_id":1007
+                        },
+                        "logs":{
+                            "channel":"aeron:ipc",
+                            "stream_id":1008
+                        },
+                        "agent":{
+                            "channel":"aeron:ipc",
+                            "stream_id":2001
+                        }
+                    },
+                    "subscribers":{
+                        "core":{
+                            "channel":"aeron:ipc",
+                            "stream_id":1004
+                        },
+                        "agent":{
+                            "channel":"aeron:ipc",
+                            "stream_id":2002
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
