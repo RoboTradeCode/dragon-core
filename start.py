@@ -2,180 +2,52 @@
 # -*- coding: UTF-8 -*-
 
 import asyncio
+import logging
+import os
+import subprocess
 
-import click
+import tomli
 
-from strategies.strategies_for_testing.breaking import BreakingTesting
-from strategies.strategies_for_testing.fast_test import FastTesting
-from strategies.strategies_for_testing.order_creating import OrderCreatingTesting
-from strategies.strategies_for_testing.orderbooks import OrderbookTesting
-from strategies.strategies_for_testing.orders_cancelling import CancellingTesting
-from testing_core.core import run_core
+from dragon_core.core import Core
+from dragon_core.receive_configuration import get_configuration_from_api, receive_configuration
 
+# проверяю запущен ли aeron media driver
+if subprocess.run('ps -A | grep aeron', shell=True, stdout=None).returncode != 0 and \
+        subprocess.run('systemctl is-active --quiet aeron', shell=True, stdout=None).returncode != 0:
+    print('Critical: Aeron service is not launched. Please launch Aeron before launching application.')
+    exit(1)
 
-class CustomMultiCommand(click.Group):
+# путь до начальной конфигурации (в ней указан способ получения полной конфигурации)
+BASIC_SETTINGS_PATH = 'settings.toml'
 
-    def command(self, *args, **kwargs):
-        """
-        Behaves the same as `click.Group.command()` except if passed
-        a list of names, all after the first will be aliases for the first.
-        """
-
-        def decorator(f):
-            if isinstance(args[0], list):
-                _args = [args[0][0]] + list(args[1:])
-                for alias in args[0][1:]:
-                    cmd = super(CustomMultiCommand, self).command(
-                        alias, *args[1:], **kwargs)(f)
-                    cmd.short_help = "Alias for '{}'".format(_args[0])
-            else:
-                _args = args
-            cmd = super(CustomMultiCommand, self).command(
-                *_args, **kwargs)(f)
-            return cmd
-
-        return decorator
+logger = logging.getLogger(__name__)
 
 
-@click.group(cls=CustomMultiCommand)
-def cli():
-    ...
+async def load_config():
+    # Загрузка начальной конфигурации (в ней указан способ получения полной конфигурации)
+    if not os.path.isfile(BASIC_SETTINGS_PATH):
+        logger.critical(f'Could not find file with basic settings.'
+                        f' Specified file path: "{BASIC_SETTINGS_PATH}".'
+                        f' Please make sure the file exists.')
+        exit(1)
+    with open(BASIC_SETTINGS_PATH, "rb") as f:
+        basic_settings = tomli.load(f)
+    logger.info('Loaded basic settings for core.')
+
+    # получение полной конфигурации и создание объекта ядра
+    config = await receive_configuration(basic_settings=basic_settings['configuration'])
+    return config
 
 
-@cli.command(['fast-testing'])
-def fast_testing():
-    """
-    Быстрая стратегия тестирования гейта.
-
-    1. Отмена всех ордеров и запрос баланса - типичная операция на старте ядра;
-
-    2. Ожидание, пока не придут балансы и ордербуки;
-
-    3. Выставление лимитного ордера;
-
-    4. Запрос статуса лимитного ордера;
-
-    5. Отмена лимитного ордера;
-
-    6. Выставление рыночного ордера;
-    """
-    asyncio.run(run_core(strategy_type=FastTesting))
-
-
-@cli.command(['cancelling-testing'])
-def cancelling_testing():
-    """
-    Стратегия тестирования отмены ордеров.
-
-    1. Посылаем команду гейту на отмену всех ордеров, принимаем ответ на команду
-    отмены (пока что ответ на отмену еще не реализован);
-
-    2. Проверяем баланс, поле `used` у всех ассетов должно быть нулевым, если где-то не нулевое, ждем 1 секунду,
-    повторяем пункт 1;
-
-    2.1. Если поле `used` у какого-то ассета не нулевое - тест провален;
-
-    3. Выбираем случайным образом рынок (BTC/USDT) из настроек, и ставим по нему 1 ордер;
-
-    4. Баланс после установки должен измениться, а именно, поле `used`;
-
-    5. Отменяем ранее выставленный ордер по id;
-
-    6. Проверяем баланс, поле `used` у ассетов должно быть нулевым, если не нулевое - тест провален;
-
-    7. Выбираем случайным образом от 3 до 5 рынков из настроек и выполняем с п.3 - 7. Только ордера создаем одной
-    командой, и отменяем командой `cancel_all_orders`;
-    """
-    asyncio.run(run_core(strategy_type=CancellingTesting))
-
-
-@cli.command(['order-creating-testing'])
-def order_creating_testing():
-    """
-    Стратегия тестирования создания ордеров.
-
-    1. Отменяем все ордера и запрашиваем баланс;
-
-    2. Создаем лимитный ордер на случайном маркете. Цена подбирается таким образом, чтобы ордер быстро исполнился;
-
-    3. Жду от гейта статусы об открытии, затем о закрытии;
-
-    4. Шаги 2 и 3 повторяются 10 раз;
-
-    5. Создаю рычночный ордер на случайном маркете;
-
-    6. Жду от гейта статусы об открытии, затем о закрытии;
-
-    7. Шаги 5 и 6 повторяются 10 раз;
-
-    8. Отправляю команду гейту, в которой есть лимитные и рыночные ордера одновременно;
-
-    """
-    asyncio.run(run_core(strategy_type=OrderCreatingTesting))
-
-
-@cli.command(['orderbook-testing'])
-def orderbook_testing():
-    """
-    Стратегия для тестирования ордербуков.
-    В данной стратегии надо проверить работу гейта в следующем:
-
-    1. что данные вообще приходят, что они меняются;
-
-    2. нету больших задержек в передаче данных;
-
-    3. в структуре стакана есть timestamp, это время события на бирже, и гейт должен присывать последовательные
-    ордербуки, т.е. если пришел ордербук с запоздавшими данными это критическа ошибка. Время должно рости;
-    """
-    asyncio.run(run_core(strategy_type=OrderbookTesting))
-
-
-@cli.command(['breaking-testing'])
-def breaking_testing():
-    """
-    Стратегия неправильного поведения ядра.
-    Тестирование стремится сломать гейт.
-
-    1. Создаем лимитный ордер с нулевой ценой и должна быть ошибка от гейта;
-
-    2. Создаем лимитный и рыночный ордер с нулевым объемом и ждем ошибку;
-
-    3. Создаем ордер с `кривым` символом, ждем от гейта ошибку;
-
-    4. Отправляем ордер с пустым `client_order_id` - ждем ошибку гейта;
-
-    5. Отправляем 10 ордеров в одной команде, из которых часть нормальных, часть кривых, ждем от гейта чтобы
-    на кривые пришла ошибка;
-
-    6. Создаем команду с 10 ордерами, 1 из них кривой, должно прийти 9 статусов open и одна ошибка;
-    """
-    asyncio.run(run_core(strategy_type=BreakingTesting))
-
-
-async def run_all():
-    """
-    Асинхронная функция для запуска стратегий.
-    """
-    await run_core(strategy_type=FastTesting)
-    await run_core(strategy_type=OrderbookTesting)
-    await run_core(strategy_type=OrderCreatingTesting)
-    await run_core(strategy_type=CancellingTesting)
-    await run_core(strategy_type=BreakingTesting)
-
-
-@cli.command(['full-testing', 'all'])
-def full_testing():
-    """
-    По очереди запустить все тестирующие стратегии. Порядок следующий:
-
-    fast-testing
-    orderbook-testing
-    order-creating-testing
-    cancelling-testing
-    breaking-testing
-    """
-    asyncio.run(run_all())
+async def start_core():
+    try:
+        config = await load_config()
+        core = Core(config=config)
+        await core.execute()
+    except Exception as exception:
+        logger.critical(f'Critical error: {exception}.')
+        exit(1)
 
 
 if __name__ == '__main__':
-    cli()
+    asyncio.run(start_core())
