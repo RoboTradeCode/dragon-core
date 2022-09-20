@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from typing import Callable, NoReturn
 
 import orjson
 from aeron import Subscriber
+
+logger = logging.getLogger(__name__)
 
 
 class Receiver(object):
@@ -19,10 +22,18 @@ class Receiver(object):
         self._subscriber.poll()
 
     def _base_handler(self, message: str):
-        parsed_message = orjson.loads(message)
-        self.handler(parsed_message)
+        try:
+            parsed_message = orjson.loads(message)
+            self.handler(parsed_message)
+        except orjson.JSONDecodeError as e:
+            logger.error(f'Json decode error: {e}, on message: {message}')
+        except Exception as e:
+            logger.error(f'Exception: {e}')
 
     async def run_poll_loop(self, sleep_time_between_iterations: float = 0.0001) -> NoReturn:
         while True:
-            self.poll()
-            await asyncio.sleep(sleep_time_between_iterations)
+            try:
+                self.poll()
+                await asyncio.sleep(sleep_time_between_iterations)
+            except Exception as e:
+                logger.error(f'Exception in loop: {e}')
