@@ -10,18 +10,27 @@ logger = logging.getLogger(__name__)
 
 
 def get_balance_base_asset(exchange_state, symbol):
+    """
+    Получает баланс базового ассета
+    """
     balance = exchange_state.balance['assets'].get(symbol.split('/')[0])
     free_balance = Decimal(str(balance['free']))
     return free_balance
 
 
 def get_balance_quote_asset(exchange_state, symbol):
+    """
+    Получает баланс котируемого ассета
+    """
     balance = exchange_state.balance['assets'].get(symbol.split('/')[1])
     free_balance = Decimal(str(balance['free']))
     return free_balance
 
 
 def calculate_profit(base_amount, buy_price, sell_price):
+    """
+    Вычисляет профит от сделки (в виде коэффициента, например 1.1, в процентах это 10%)
+    """
     buy_amount = base_amount * buy_price
     sell_amount = base_amount * sell_price
     profit = sell_amount / buy_amount
