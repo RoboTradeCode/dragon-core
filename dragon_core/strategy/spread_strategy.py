@@ -92,7 +92,7 @@ class SpreadStrategy(object):
         Обновить ордера на бирже
         """
         commands = []
-        if orders:
+        if orders and orders is not None:
             for order in orders:
                 # маркет ордер не нужно специально обрабатывать, просто логгирую его
                 if order['type'] == 'market':
