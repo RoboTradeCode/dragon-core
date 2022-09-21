@@ -92,26 +92,27 @@ class SpreadStrategy(object):
         Обновить ордера на бирже
         """
         commands = []
-        for order in orders:
-            # маркет ордер не нужно специально обрабатывать, просто логгирую его
-            if order['type'] == 'market':
-                print(f'Market order: {order}')
-                continue
-            # для лимит ордера нужно пересчитать стратегию
-            order_id = self.exchange_1.limit_orders.get('client_order_id', '')
-            client_order_id = order.get('client_order_id', '')
-            if self.exchange_1.limit_orders.get(client_order_id) is not None:
-                self.exchange_1.limit_orders[client_order_id] = order
-                commands += self.monitor_orders(self.exchange_1, self.exchange_2)
-                if order['status'] != 'open':
-                    del self.exchange_1.limit_orders[client_order_id]
-            elif self.exchange_2.limit_orders.get(client_order_id) is not None:
-                self.exchange_2.limit_orders[client_order_id] = order
-                commands += self.monitor_orders(self.exchange_2, self.exchange_1)
-                if order['status'] != 'open':
-                    del self.exchange_2.limit_orders[client_order_id]
-            else:
-                print(f'Unexpected order: {order}')
+        if orders:
+            for order in orders:
+                # маркет ордер не нужно специально обрабатывать, просто логгирую его
+                if order['type'] == 'market':
+                    print(f'Market order: {order}')
+                    continue
+                # для лимит ордера нужно пересчитать стратегию
+                order_id = self.exchange_1.limit_orders.get('client_order_id', '')
+                client_order_id = order.get('client_order_id', '')
+                if self.exchange_1.limit_orders.get(client_order_id) is not None:
+                    self.exchange_1.limit_orders[client_order_id] = order
+                    commands += self.monitor_orders(self.exchange_1, self.exchange_2)
+                    if order['status'] != 'open':
+                        del self.exchange_1.limit_orders[client_order_id]
+                elif self.exchange_2.limit_orders.get(client_order_id) is not None:
+                    self.exchange_2.limit_orders[client_order_id] = order
+                    commands += self.monitor_orders(self.exchange_2, self.exchange_1)
+                    if order['status'] != 'open':
+                        del self.exchange_2.limit_orders[client_order_id]
+                else:
+                    print(f'Unexpected order: {order}')
         return commands
 
     def update_balances(self, exchange_name, balances):
