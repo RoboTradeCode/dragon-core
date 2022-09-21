@@ -1,10 +1,10 @@
 import asyncio
 import logging
-import time
 import uuid
 from decimal import Decimal
 
 from dragon_core.gate import Gate
+from dragon_core.log_server import LogServer
 from dragon_core.strategy.spread_strategy import SpreadStrategy
 from dragon_core.utils import time_us, convert_orderbook_float_to_decimal, convert_balance_float_to_decimal, \
     convert_order_float_to_decimal
@@ -41,6 +41,7 @@ class Core(object):
             exchange_1_name=self.exchange_1_name,
             exchange_2_name=self.exchange_2_name
         )
+        self.log_server = LogServer(config=core_config)
 
     async def execute(self):
         # сон на 1 секунду чтобы успели создаться каналы aeron
@@ -104,6 +105,10 @@ class Core(object):
             if commands:
                 self.send_commands(commands)
         else:
+            # todo временное решение, чтобы не засорять логи этими сообщениями от гейта
+            if message.get('message') in ["'NoneType' object has no attribute 'assets'",
+                                          "'NoneType' object is not iterable"]:
+                return
             logger.warning(f'Received unspecified message: {message}')
 
     def handle_balances(self, message: dict):
