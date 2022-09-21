@@ -6,7 +6,8 @@ from decimal import Decimal
 
 from dragon_core.gate import Gate
 from dragon_core.strategy.spread_strategy import SpreadStrategy
-from dragon_core.utils import time_us
+from dragon_core.utils import time_us, convert_orderbook_float_to_decimal, convert_balance_float_to_decimal, \
+    convert_order_float_to_decimal
 
 logger = logging.getLogger(__name__)
 
@@ -90,22 +91,25 @@ class Core(object):
         return loops
 
     def handle_orderbooks(self, message: dict):
-        commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=message['data'])
+        orderbook = convert_orderbook_float_to_decimal(orderbook=message['data'])
+        commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
-        if message['action'] in ['orders_update', 'create_orders', 'get_orders', 'cancel_orders']:
-            logger.debug(f'Receiver order: {message}')
-            commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=message['data'])
+        if message['event'] in ['data']:
+            logger.debug(f'Received orders: {message}')
+            orders = [convert_order_float_to_decimal(order) for order in message['data']]
+            commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
                 self.send_commands(commands)
         else:
             logger.warning(f'Received unspecified message: {message}')
 
     def handle_balances(self, message: dict):
-        logger.debug(f'Receiver balance: {message}')
-        commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=message['data'])
+        logger.debug(f'Received balance: {message}')
+        balances = convert_balance_float_to_decimal(balance=message['data'])
+        commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=balances)
         if commands:
             self.send_commands(commands)
 
