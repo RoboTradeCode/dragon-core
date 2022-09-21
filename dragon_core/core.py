@@ -93,13 +93,15 @@ class Core(object):
 
     def handle_orders(self, message: dict):
         if message['action'] in ['orders_update', 'create_orders', 'get_orders', 'cancel_orders']:
+            logger.debug(f'Receiver order: {message}')
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=message['data'])
             if commands:
                 self.send_commands(commands)
         else:
-            logger.info(f'Received message: {message}')
+            logger.warning(f'Received unspecified message: {message}')
 
     def handle_balances(self, message: dict):
+        logger.debug(f'Receiver balance: {message}')
         commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=['data'])
         if commands:
             self.send_commands(commands)
