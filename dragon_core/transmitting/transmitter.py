@@ -20,6 +20,8 @@ class Transmitter(object):
         else:
             message_as_str = message
 
+        logger.info(f'Send command: {message_as_str}')
+
         is_successful = False
         while not is_successful:
             try:
