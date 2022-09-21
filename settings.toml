@@ -5,7 +5,7 @@
     type = 'api'
 
     # Эндпоинт для получения конфигурации от конфигуратора. Обязательно, если выставлен source = 'api'
-    path = 'https://configurator.robotrade.io/binance/sandbox?only_new=false'
+    path = 'https://configurator.robotrade.io/binance/mt_py_testing?only_new=false'
 
     # Путь до файла файла, из которого загружается конфигурация. Обязательно, если выставлен source = 'file'
 #    path = 'default_config.json'
