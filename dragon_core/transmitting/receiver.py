@@ -28,7 +28,7 @@ class Receiver(object):
         except orjson.JSONDecodeError as e:
             logger.error(f'Json decode error: {e}, on message: {message}')
         except Exception as e:
-            logger.error(f'Exception: {e}')
+            logger.error(f'Exception: {e}', exc_info=True)
 
     async def run_poll_loop(self, sleep_time_between_iterations: float = 0.0001) -> NoReturn:
         while True:
@@ -36,4 +36,4 @@ class Receiver(object):
                 self.poll()
                 await asyncio.sleep(sleep_time_between_iterations)
             except Exception as e:
-                logger.error(f'Exception in loop: {e}')
+                logger.error(f'Exception in loop: {e}', exc_info=True)
