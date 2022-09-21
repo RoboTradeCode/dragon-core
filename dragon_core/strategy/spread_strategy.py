@@ -198,6 +198,11 @@ class SpreadStrategy(object):
         # получаю цену исполнения маркет-ордера в текущем ордербуке
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange_to_market.orderbook[symbol])
 
+        # если баланс слишком маленький
+        if limit_order_price * amount_in_base_token <= 10:
+            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}')
+            return []
+
         # получаю профит от сделки (в процентах)
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
@@ -245,6 +250,11 @@ class SpreadStrategy(object):
 
         # получаю цену лучшего аска в ордербуке
         limit_order_price = exchange_to_limit.orderbook[symbol]['asks'][0][0]
+
+        # если баланс слишком маленький
+        if limit_order_price * amount_in_base_token <= 10:
+            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}')
+            return []
 
         # получаю цену исполнения маркет-ордера в текущем ордербуке
         market_order_price = predict_price_of_market_buy(amount_in_base_token, exchange_to_market.orderbook[symbol])
