@@ -42,6 +42,9 @@ class Core(object):
         )
 
     async def execute(self):
+        # сон на 1 секунду чтобы успели создаться каналы aeron
+        await asyncio.sleep(1)
+
         logger.info('Cancel all orders and request balances on exchanges.')
         self.send_initial_commands()
 
