@@ -14,9 +14,13 @@ class Transmitter(object):
     def __init__(self, channel: str, stream_id: int):
         self._publisher = Publisher(channel=channel, stream_id=stream_id)
 
-    def publish(self, message: dict):
+    def publish(self, message: dict | str):
+        if isinstance(message, dict):
+            message_as_str = orjson.dumps(message)
+        else:
+            message_as_str = message
+
         is_successful = False
-        message_as_str = str(orjson.dumps(message))
         while not is_successful:
             try:
                 self._publisher.offer(message_as_str)
