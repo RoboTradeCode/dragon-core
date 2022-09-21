@@ -260,7 +260,7 @@ class SpreadStrategy(object):
             order = create_order(
                 exchange=exchange_to_limit.name,
                 client_order_id=client_order_id,
-                symbol=exchange_to_limit.orderbook['symbol'],
+                symbol=symbol,
                 amount=amount_in_base_token,
                 price=limit_order_price,
                 side='sell',
