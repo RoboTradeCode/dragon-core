@@ -105,7 +105,7 @@ class Core(object):
 
     def handle_balances(self, message: dict):
         logger.debug(f'Receiver balance: {message}')
-        commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=['data'])
+        commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=message['data'])
         if commands:
             self.send_commands(commands)
 
