@@ -15,7 +15,7 @@ def float_to_decimal(f: float):
 
 
 def convert_orderbook_float_to_decimal(orderbook: dict):
-    decimal_orderbook = {'asks': [], 'bids': []}
+    decimal_orderbook = copy.deepcopy(orderbook)
     for level in orderbook['asks']:
         decimal_orderbook['asks'].append([float_to_decimal(level[0]), float_to_decimal(level[1])])
     for level in orderbook['bids']:
@@ -24,7 +24,7 @@ def convert_orderbook_float_to_decimal(orderbook: dict):
 
 
 def convert_balance_float_to_decimal(balance: dict):
-    decimal_balance = {'assets':{}}
+    decimal_balance = copy.deepcopy(balance)
     for key, value in balance['assets'].items():
         decimal_balance['assets'][key] = float_to_decimal(value)
     return decimal_balance
