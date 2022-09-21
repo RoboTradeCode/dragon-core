@@ -202,10 +202,9 @@ class SpreadStrategy(object):
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
         # проверяю, что профит от сделки больше минимального
-        if profit < self.min_profit:
-            logger.debug(f'Недостаточная прибыль: '
-                         f'{profit * 100 - 100}% < {self.min_profit * 100 - 100}%')
-        else:
+        if profit > self.min_profit:
+            logger.debug(f'Прибыль: '
+                         f'{profit * 100 - 100}% > {self.min_profit * 100 - 100}%')
             # создаю ордер
             client_order_id = f'{uuid.uuid4()}|spread_start'
             order = create_order(
@@ -254,11 +253,9 @@ class SpreadStrategy(object):
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
         # проверяю, что профит от сделки больше минимального
-        if profit < self.min_profit:
-            logger.debug(f'Недостаточная прибыль: '
-                         f'{profit * 100 - 100}% < {self.min_profit * 100 - 100}%')
-        else:
-            # создаю ордер
+        if profit > self.min_profit:
+            logger.debug(f'Прибыль: '
+                         f'{profit * 100 - 100}% > {self.min_profit * 100 - 100}%')
             client_order_id = f'{uuid.uuid4()}|spread_start'
             order = create_order(
                 exchange=exchange_to_limit.name,
