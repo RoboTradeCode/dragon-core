@@ -127,7 +127,7 @@ class Core(object):
         commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
             self.log(message=f'Current state', data=self.strategy.exchange_1.__dict__, exchange=self.exchange_1_name)
-            self.log(message=f'Current state', data=self.strategy.exchange_1.__dict__, exchange=self.exchange_2_name)
+            self.log(message=f'Current state', data=self.strategy.exchange_2.__dict__, exchange=self.exchange_2_name)
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
@@ -157,11 +157,11 @@ class Core(object):
 
     def send_commands(self, commands):
         for command in commands:
-            command['event_id'] = str(uuid.uuid4()),
-            command['event'] = 'command',
-            command['node'] = 'core',
-            command['algo'] = self.algo,
-            command['message'] = None,
+            command['event_id'] = str(uuid.uuid4())
+            command['event'] = 'command'
+            command['node'] = 'core'
+            command['algo'] = self.algo
+            command['message'] = None
             command['instance'] = self.instance
 
             if command['exchange'] == self.gate_1.exchange_name:
