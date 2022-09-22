@@ -37,6 +37,10 @@ def calculate_profit(base_amount, buy_price, sell_price):
     return profit
 
 
+def to_percent_from_coef(profit):
+    return profit * 100 - 100
+
+
 class SpreadStrategy(object):
     min_profit: Decimal
     balance_part_to_use: Decimal
@@ -206,10 +210,14 @@ class SpreadStrategy(object):
         # получаю профит от сделки (в процентах)
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
+        exchange_to_limit.buy_limit_order_price = limit_order_price
+        exchange_to_limit.sell_market_order_price = market_order_price
+        exchange_to_limit.buy_profit = to_percent_from_coef(profit)
+
         # проверяю, что профит от сделки больше минимального
         if profit > self.min_profit:
             logger.debug(f'Прибыль: '
-                         f'{profit * 100 - 100}% > {self.min_profit * 100 - 100}%')
+                         f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
             # создаю ордер
             client_order_id = f'{uuid.uuid4()}|spread_start'
             order = create_order(
@@ -262,10 +270,14 @@ class SpreadStrategy(object):
         # получаю профит от сделки (в процентах)
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
+        exchange_to_limit.sell_limit_order_price = limit_order_price
+        exchange_to_limit.buy_market_order_price = market_order_price
+        exchange_to_limit.sell_profit = to_percent_from_coef(profit)
+
         # проверяю, что профит от сделки больше минимального
         if profit > self.min_profit:
             logger.debug(f'Прибыль: '
-                         f'{profit * 100 - 100}% > {self.min_profit * 100 - 100}%')
+                         f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
             client_order_id = f'{uuid.uuid4()}|spread_start'
             order = create_order(
                 exchange=exchange_to_limit.name,

@@ -63,24 +63,30 @@ class Core(object):
         self.request_balances()
 
     def cancel_all_orders(self):
-        cancel_all_orders_command = self.get_command_template()
-        cancel_all_orders_command['action'] = 'cancel_all_orders'
-        cancel_all_orders_command['exchange'] = self.exchange_1_name
-        self.gate_1.send_to_gate(message=cancel_all_orders_command)
-        cancel_all_orders_command['event_id'] = str(uuid.uuid4())
-        cancel_all_orders_command['exchange'] = self.exchange_2_name
-        self.gate_2.send_to_gate(message=cancel_all_orders_command)
+        commands = []
+        cancel_all_orders_command_1 = self.get_command_template()
+        cancel_all_orders_command_1['action'] = 'cancel_all_orders'
+        cancel_all_orders_command_1['exchange'] = self.exchange_1_name
+        commands.append(cancel_all_orders_command_1)
+        cancel_all_orders_command_2 = self.get_command_template()
+        cancel_all_orders_command_2['action'] = 'cancel_all_orders'
+        cancel_all_orders_command_2['exchange'] = self.exchange_2_name
+        commands.append(cancel_all_orders_command_2)
+        self.send_commands(commands)
 
     def request_balances(self):
-        get_balance_command = self.get_command_template()
-        get_balance_command['action'] = 'get_balance'
-        get_balance_command['exchange'] = self.exchange_1_name
-        self.gate_1.send_to_gate(message=get_balance_command)
-        get_balance_command['event_id'] = str(uuid.uuid4())
-        get_balance_command['exchange'] = self.exchange_2_name
-        self.gate_2.send_to_gate(message=get_balance_command)
+        commands = []
+        get_balance_command_1 = self.get_command_template()
+        get_balance_command_1['action'] = 'get_balance'
+        get_balance_command_1['exchange'] = self.exchange_1_name
+        commands.append(get_balance_command_1)
+        get_balance_command_2 = self.get_command_template()
+        get_balance_command_2['action'] = 'get_balance'
+        get_balance_command_2['exchange'] = self.exchange_2_name
+        commands.append(get_balance_command_2)
+        self.send_commands(commands)
 
-    def log(self, message: str = None, data: Any = None, event_id: str = None):
+    def log(self, message: str = None, data: Any = None, event_id: str = None, exchange: str = None):
         """
         Отправить сообщение на лог сервер
         """
@@ -89,6 +95,7 @@ class Core(object):
         event['event'] = 'metrics'
         event['message'] = message
         event['data'] = data
+        event['exchange'] = exchange
         self.log_server.send(event)
 
     def get_command_template(self) -> dict:
@@ -119,8 +126,8 @@ class Core(object):
         orderbook = convert_orderbook_float_to_decimal(orderbook=message['data'])
         commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
-            self.log(message=f'Current balances {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
-            self.log(message=f'Current balances {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
+            self.log(message=f'Current state', data=self.strategy.exchange_1.__dict__, exchange=self.exchange_1_name)
+            self.log(message=f'Current state', data=self.strategy.exchange_1.__dict__, exchange=self.exchange_2_name)
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
@@ -129,8 +136,8 @@ class Core(object):
             orders = [convert_order_float_to_decimal(order) for order in message['data']]
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
-                self.log(message=f'Current balances {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
-                self.log(message=f'Current balances {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
+                self.log(message=f'Current state', data=self.strategy.exchange_1, exchange=self.exchange_1_name)
+                self.log(message=f'Current state', data=self.strategy.exchange_2, exchange=self.exchange_2_name)
                 self.send_commands(commands)
         else:
             # todo временное решение, чтобы не засорять логи этими сообщениями от гейта
@@ -163,3 +170,5 @@ class Core(object):
                 self.gate_1.send_to_gate(command)
             else:
                 logger.error(f'Unexpected exchange: {command}')
+
+            self.log_server.send(command)

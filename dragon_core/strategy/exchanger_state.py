@@ -1,4 +1,7 @@
 import dataclasses
+from decimal import Decimal
+
+import simplejson
 
 
 @dataclasses.dataclass
@@ -10,3 +13,13 @@ class ExchangeState:
     limit_orders: dict[str, dict] = None
     orderbook: dict = None
     balance: dict = None
+    sell_market_order_price: Decimal = None
+    buy_limit_order_price: Decimal = None
+    buy_market_order_price: Decimal = None
+    sell_limit_order_price: Decimal = None
+    buy_profit: Decimal = None
+    sell_profit: Decimal = None
+
+    def toJSON(self):
+        return simplejson.dumps(self, default=lambda o: o.__dict__,
+                                sort_keys=True, indent=4)
