@@ -2,6 +2,7 @@ import asyncio
 import logging
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from dragon_core.gate import Gate
 from dragon_core.log_server import LogServer
@@ -48,7 +49,12 @@ class Core(object):
         await asyncio.sleep(1)
 
         logger.info('Cancel all orders and request balances on exchanges.')
-        self.send_initial_commands()
+        while self.strategy.exchange_1.balance is None or self.strategy.exchange_2.balance is None:
+            await asyncio.sleep(1)
+            self.send_initial_commands()
+
+        self.log(message=f'Initial balances on {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
+        self.log(message=f'Initial balances on {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
 
         logger.info('Starting core loops...')
         loops = self.get_loops()
@@ -71,12 +77,27 @@ class Core(object):
         get_balance_command['exchange'] = self.exchange_2_name
         self.gate_2.send_to_gate(message=get_balance_command)
 
-
+    def log(self, message: str = None, data: Any = None, event_id: str = None):
+        """
+        Отправить сообщение на лог сервер
+        """
+        event = self.get_event_template()
+        event['event_id'] = str(uuid.uuid4()) if event_id is None else event_id
+        event['event'] = 'metrics'
+        event['message'] = message
+        event['data'] = data
+        self.log_server.send(message)
 
     def get_command_template(self) -> dict:
+        event = self.get_event_template()
+        event['event_id'] = str(uuid.uuid4())
+        event['event'] = 'command'
+        return event
+
+    def get_event_template(self) -> dict:
         return {
-            "event_id": str(uuid.uuid4()),
-            "event": "command",
+            "event_id": None,
+            "event": None,
             "exchange": None,
             "node": "core",
             "instance": self.instance,
@@ -95,6 +116,8 @@ class Core(object):
         orderbook = convert_orderbook_float_to_decimal(orderbook=message['data'])
         commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
+            self.log(message=f'Current balances {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
+            self.log(message=f'Current balances {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
@@ -103,6 +126,8 @@ class Core(object):
             orders = [convert_order_float_to_decimal(order) for order in message['data']]
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
+                self.log(message=f'Current balances {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
+                self.log(message=f'Current balances {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
                 self.send_commands(commands)
         else:
             # todo временное решение, чтобы не засорять логи этими сообщениями от гейта
@@ -116,6 +141,8 @@ class Core(object):
         balances = convert_balance_float_to_decimal(balance=message['data'])
         commands = self.strategy.update_balances(exchange_name=message['exchange'], balances=balances)
         if commands:
+            self.log(message=f'Current balances {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
+            self.log(message=f'Current balances {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
             self.send_commands(commands)
 
     def send_commands(self, commands):
