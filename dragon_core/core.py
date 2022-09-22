@@ -49,12 +49,7 @@ class Core(object):
         await asyncio.sleep(1)
 
         logger.info('Cancel all orders and request balances on exchanges.')
-        while self.strategy.exchange_1.balance is None or self.strategy.exchange_2.balance is None:
-            await asyncio.sleep(1)
-            self.send_initial_commands()
-
-        self.log(message=f'Initial balances on {self.exchange_1_name}', data=self.strategy.exchange_1.balance)
-        self.log(message=f'Initial balances on {self.exchange_2_name}', data=self.strategy.exchange_2.balance)
+        self.send_initial_commands()
 
         logger.info('Starting core loops...')
         loops = self.get_loops()
@@ -62,18 +57,26 @@ class Core(object):
 
     def send_initial_commands(self):
         # cancel all orders
+        self.cancel_all_orders()
+
+        # get balance
+        self.request_balances()
+
+    def cancel_all_orders(self):
         cancel_all_orders_command = self.get_command_template()
         cancel_all_orders_command['action'] = 'cancel_all_orders'
         cancel_all_orders_command['exchange'] = self.exchange_1_name
         self.gate_1.send_to_gate(message=cancel_all_orders_command)
+        cancel_all_orders_command['event_id'] = str(uuid.uuid4())
         cancel_all_orders_command['exchange'] = self.exchange_2_name
         self.gate_2.send_to_gate(message=cancel_all_orders_command)
 
-        # get balance
+    def request_balances(self):
         get_balance_command = self.get_command_template()
         get_balance_command['action'] = 'get_balance'
         get_balance_command['exchange'] = self.exchange_1_name
         self.gate_1.send_to_gate(message=get_balance_command)
+        get_balance_command['event_id'] = str(uuid.uuid4())
         get_balance_command['exchange'] = self.exchange_2_name
         self.gate_2.send_to_gate(message=get_balance_command)
 
@@ -86,7 +89,7 @@ class Core(object):
         event['event'] = 'metrics'
         event['message'] = message
         event['data'] = data
-        self.log_server.send(message)
+        self.log_server.send(event)
 
     def get_command_template(self) -> dict:
         event = self.get_event_template()
