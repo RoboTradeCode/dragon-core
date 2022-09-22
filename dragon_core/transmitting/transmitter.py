@@ -1,6 +1,6 @@
 import logging
 
-import orjson as orjson
+import simplejson as simplejson
 from aeron import Publisher, AeronPublicationNotConnectedError, AeronPublicationAdminActionError, AeronPublicationError
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class Transmitter(object):
 
     def publish(self, message: dict | str):
         if isinstance(message, dict):
-            message_as_str = orjson.dumps(message)
+            message_as_str = simplejson.dumps(message, use_decimal=True)
         else:
             message_as_str = message
 
