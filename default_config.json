@@ -278,7 +278,15 @@
                             }
                         }
                     }
-                ]
+                ],
+                "aeron": {
+                    "publishers": {
+                        "logs": {
+                            "channel": "aeron:ipc",
+                            "stream_id": 1008
+                        }
+                    }
+                }
             },
             "gate_config":{
                 "info":{
