@@ -96,6 +96,7 @@ class Core(object):
         event['message'] = message
         event['data'] = data
         event['exchange'] = exchange
+        logging.info(event)
         self.log_server.send(event)
 
     def get_command_template(self) -> dict:
@@ -171,4 +172,5 @@ class Core(object):
             else:
                 logger.error(f'Unexpected exchange: {command}')
 
+            logging.info(command)
             self.log_server.send(command)
