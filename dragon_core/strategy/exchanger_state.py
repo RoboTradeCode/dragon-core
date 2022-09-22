@@ -20,6 +20,3 @@ class ExchangeState:
     buy_profit: Decimal = None
     sell_profit: Decimal = None
 
-    def toJSON(self):
-        return simplejson.dumps(self, default=lambda o: o.__dict__,
-                                sort_keys=True, indent=4)
