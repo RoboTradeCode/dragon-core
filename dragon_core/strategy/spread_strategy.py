@@ -211,7 +211,7 @@ class SpreadStrategy(object):
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
         exchange_to_limit.buy_limit_order_price = limit_order_price
-        exchange_to_limit.sell_market_order_price = market_order_price
+        exchange_to_market.sell_market_order_price = market_order_price
         exchange_to_limit.buy_profit = to_percent_from_coef(profit)
 
         # проверяю, что профит от сделки больше минимального
@@ -271,7 +271,7 @@ class SpreadStrategy(object):
         profit = calculate_profit(amount_in_base_token, limit_order_price, market_order_price)
 
         exchange_to_limit.sell_limit_order_price = limit_order_price
-        exchange_to_limit.buy_market_order_price = market_order_price
+        exchange_to_market.buy_market_order_price = market_order_price
         exchange_to_limit.sell_profit = to_percent_from_coef(profit)
 
         # проверяю, что профит от сделки больше минимального
