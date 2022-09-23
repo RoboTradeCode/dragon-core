@@ -168,7 +168,7 @@ class Core(object):
             if command['exchange'] == self.gate_1.exchange_name:
                 self.gate_1.send_to_gate(command)
             elif command['exchange'] == self.gate_2.exchange_name:
-                self.gate_1.send_to_gate(command)
+                self.gate_2.send_to_gate(command)
             else:
                 logger.error(f'Unexpected exchange: {command}')
 
