@@ -63,7 +63,7 @@ class SpreadStrategy(object):
         """
         # перевожу в коэффициент для удобного использования
         self.min_profit = min_profit / 100 + 1
-        self.balance_part_to_use = balance_part_to_use / 100 + 1
+        self.balance_part_to_use = balance_part_to_use / 100
         self.depth_limit = depth_limit / 100 + 1
 
         self.exchange_1 = ExchangeState(name=exchange_1_name, limit_orders={}, orderbook={})
