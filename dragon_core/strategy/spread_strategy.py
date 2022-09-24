@@ -328,6 +328,7 @@ class SpreadStrategy(object):
             orderbook_of_exchange_for_market_order = exchange_for_market_order.orderbook[symbol]
             order_price = order['price']
             base_amount = order['amount']
+            filled_amount = order.get('filled', Decimal('0'))
             quote_amount = order_price * base_amount
             if order['side'] == 'sell':
                 # проверка, что сделка выгодная
@@ -335,7 +336,7 @@ class SpreadStrategy(object):
                 if order_price / predict_price < self.min_profit:
                     return False
                 # проверка на достаточный баланс для совершения завершающей сделки
-                if quote_amount < get_balance_quote_asset(exchange_for_market_order, symbol):
+                if quote_amount - filled_amount < get_balance_quote_asset(exchange_for_market_order, symbol):
                     return False
                 # проверка на уход вглубь ордербука`
                 if orderbook_of_exchange_for_limit_order[symbol]['bids'][0][0] / order_price > self.depth_limit:
@@ -346,7 +347,7 @@ class SpreadStrategy(object):
                 if predict_price / order_price < self.min_profit:
                     return False
                 # проверка на достаточный баланс для совершения завершающей сделки
-                if base_amount < get_balance_base_asset(exchange_for_market_order, symbol):
+                if quote_amount - filled_amount < get_balance_base_asset(exchange_for_market_order, symbol):
                     return False
                 # проверка на уход вглубь ордербука
                 if abs(order_price / orderbook_of_exchange_for_limit_order['asks'][0][0] - 1) > self.depth_limit:
