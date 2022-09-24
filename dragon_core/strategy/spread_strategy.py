@@ -136,6 +136,7 @@ class SpreadStrategy(object):
         Проверить текущие лимитные ордера на актуальность (прибыльность при условии создания обратного маркет ордера)
         """
         commands = []
+        order_ids_to_del = []
         for client_order_id, order in exchange_for_limit_order.limit_orders.items():
             if order['filled'] > 0:
                 # создать маркет ордер
@@ -157,6 +158,9 @@ class SpreadStrategy(object):
                     symbol=order['symbol'],
                     client_order_id=client_order_id
                 ))
+                order_ids_to_del.append(client_order_id)
+        for client_order_id in order_ids_to_del:
+            del exchange_for_limit_order.limit_orders[client_order_id]
         return commands
 
     def execute_spread_strategy(self) -> list[dict]:
