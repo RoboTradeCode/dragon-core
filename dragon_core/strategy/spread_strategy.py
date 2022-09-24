@@ -108,12 +108,12 @@ class SpreadStrategy(object):
                 if self.exchange_1.limit_orders.get(client_order_id) is not None:
                     self.exchange_1.limit_orders[client_order_id] = order
                     commands += self.monitor_orders(self.exchange_1, self.exchange_2)
-                    if order['status'] != 'open':
+                    if order['status'] != 'open' and self.exchange_1.limit_orders.get(client_order_id) is not None:
                         del self.exchange_1.limit_orders[client_order_id]
                 elif self.exchange_2.limit_orders.get(client_order_id) is not None:
                     self.exchange_2.limit_orders[client_order_id] = order
                     commands += self.monitor_orders(self.exchange_2, self.exchange_1)
-                    if order['status'] != 'open':
+                    if order['status'] != 'open' and self.exchange_2.limit_orders.get(client_order_id) is not None:
                         del self.exchange_2.limit_orders[client_order_id]
                 else:
                     print(f'Unexpected order: {order}')
