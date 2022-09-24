@@ -1,7 +1,8 @@
 import logging
 
 import simplejson as simplejson
-from aeron import Publisher, AeronPublicationNotConnectedError, AeronPublicationAdminActionError, AeronPublicationError
+from aeron import Publisher, AeronPublicationNotConnectedError, AeronPublicationAdminActionError, AeronPublicationError, \
+    AeronPublicationBackPressuredError
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,10 @@ class Transmitter(object):
             # обработка случая, когда нет подписчика
             except AeronPublicationNotConnectedError:
                 logger.warning(f'Subscriber is not connected. Message: {message_as_str}')
+                break
+            # обработка случая, когда отправлено слишком много сообщения
+            except AeronPublicationBackPressuredError:
+                logger.error(f'Failed due to back pressure. Message: {message_as_str}')
                 break
             # обработка случая admin actin (сообщение будет отправлено снова)
             except AeronPublicationAdminActionError:
