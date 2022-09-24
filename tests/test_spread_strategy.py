@@ -10,7 +10,7 @@ class TestSpreadStrategy(TestCase):
     def test_strategy_creating(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('100'),
+            balance_part_to_use=Decimal('25'),
             depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
@@ -19,7 +19,7 @@ class TestSpreadStrategy(TestCase):
     def test_strategy_update_orderbook(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('100'),
+            balance_part_to_use=Decimal('25'),
             depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
@@ -46,7 +46,7 @@ class TestSpreadStrategy(TestCase):
     def test_limit_order_creating(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('100'),
+            balance_part_to_use=Decimal('25'),
             depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
@@ -103,7 +103,7 @@ class TestSpreadStrategy(TestCase):
     def test_cancel_orders(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('100'),
+            balance_part_to_use=Decimal('25'),
             depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
@@ -160,7 +160,7 @@ class TestSpreadStrategy(TestCase):
     def test_market_order(self):
         strategy = SpreadStrategy(
             min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('100'),
+            balance_part_to_use=Decimal('25'),
             depth_limit=Decimal('10'),
             exchange_1_name='binance',
             exchange_2_name='exmo'
