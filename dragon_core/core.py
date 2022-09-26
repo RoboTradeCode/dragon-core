@@ -127,8 +127,8 @@ class Core(object):
         orderbook = convert_orderbook_float_to_decimal(orderbook=message['data'])
         commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
-            self.log(message=f'Current state', data=self.strategy.exchange_1.__dict__, exchange=self.exchange_1_name)
-            self.log(message=f'Current state', data=self.strategy.exchange_2.__dict__, exchange=self.exchange_2_name)
+            self.log(message=f'Current state', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name)
+            self.log(message=f'Current state', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name)
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
@@ -137,8 +137,8 @@ class Core(object):
             orders = [convert_order_float_to_decimal(order) for order in message['data']]
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
-                self.log(message=f'Current state', data=self.strategy.exchange_1, exchange=self.exchange_1_name)
-                self.log(message=f'Current state', data=self.strategy.exchange_2, exchange=self.exchange_2_name)
+                self.log(message=f'State', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name)
+                self.log(message=f'State', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name)
                 self.send_commands(commands)
         else:
             # todo временное решение, чтобы не засорять логи этими сообщениями от гейта

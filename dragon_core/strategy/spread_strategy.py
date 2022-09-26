@@ -140,6 +140,9 @@ class SpreadStrategy(object):
         for client_order_id, order in exchange_for_limit_order.limit_orders.items():
             if order['filled'] > 0:
                 # создать маркет ордер
+                market_order_side = 'buy' if order['side'] == 'sell' else 'sell'
+                logger.info(f'Create {market_order_side} market order {order["symbol"]} on exchange: '
+                            f'{exchange_for_limit_order.name}')
                 commands.append(create_order(
                     exchange=exchange_for_market_order.name,
                     client_order_id=f'{uuid.uuid4()}|spread_end',
@@ -147,12 +150,14 @@ class SpreadStrategy(object):
                     amount=order['filled'],
                     price=order['price'],
                     type='market',
-                    side='buy' if order['side'] == 'sell' else 'sell'
+                    side=market_order_side
                 ))
             if not self.check_order_to_actual(exchange_for_limit_order=exchange_for_limit_order,
                                               exchange_for_market_order=exchange_for_market_order,
                                               client_order_id=client_order_id):
                 # отменить ордер
+                logger.info(f'Cancel {order["side"]} limit order {order["symbol"]} on exchange: '
+                            f'{exchange_for_limit_order.name}')
                 commands.append(cancel_order(
                     exchange=exchange_for_limit_order.name,
                     symbol=order['symbol'],
@@ -208,7 +213,8 @@ class SpreadStrategy(object):
 
         # если баланс слишком маленький
         if limit_order_price * amount_in_base_token <= 10:
-            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}')
+            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}. '
+                        f'Order price: {limit_order_price}, amount: {amount_in_base_token}')
             return []
 
         # получаю профит от сделки (в процентах)
@@ -220,9 +226,10 @@ class SpreadStrategy(object):
 
         # проверяю, что профит от сделки больше минимального
         if profit > self.min_profit:
-            logger.debug(f'Прибыль: '
-                         f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
+            logger.info(f'Profit: '
+                        f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
             # создаю ордер
+            logger.info(f'Create buy limit order {symbol} on exchange: {exchange_to_limit.name}')
             client_order_id = f'{uuid.uuid4()}|spread_start'
             order = create_order(
                 exchange=exchange_to_limit.name,
@@ -281,9 +288,10 @@ class SpreadStrategy(object):
 
         # проверяю, что профит от сделки больше минимального
         if profit > self.min_profit:
-            logger.debug(f'Прибыль: '
-                         f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
+            logger.info(f'Profit: '
+                        f'{to_percent_from_coef(profit)}% > {to_percent_from_coef(self.min_profit)}%')
             client_order_id = f'{uuid.uuid4()}|spread_start'
+            logger.info(f'Create sell limit order {symbol} on exchange: {exchange_to_limit.name}')
             order = create_order(
                 exchange=exchange_to_limit.name,
                 client_order_id=client_order_id,
@@ -309,6 +317,8 @@ class SpreadStrategy(object):
                                               exchange_for_market_order=exchange_for_market_order,
                                               client_order_id=client_order_id):
                 # отменить ордер
+                logger.info(f'Cancel {order["side"]} limit order {order["symbol"]} on exchange: '
+                            f'{exchange_for_limit_order.name}')
                 commands.append(cancel_order(
                     exchange=exchange_for_limit_order.name,
                     symbol=order['symbol'],
