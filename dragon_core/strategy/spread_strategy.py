@@ -213,8 +213,6 @@ class SpreadStrategy(object):
 
         # если баланс слишком маленький
         if limit_order_price * amount_in_base_token <= 10:
-            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}. '
-                        f'Order price: {limit_order_price}, amount: {amount_in_base_token}')
             return []
 
         # получаю профит от сделки (в процентах)
@@ -272,8 +270,6 @@ class SpreadStrategy(object):
 
         # если баланс слишком маленький
         if limit_order_price * amount_in_base_token <= 10:
-            logger.info(f'Insufficient balance: {exchange_to_limit.balance}, {exchange_to_market.balance}. '
-                        f'Order price: {limit_order_price}, amount: {amount_in_base_token}')
             return []
 
         # получаю цену исполнения маркет-ордера в текущем ордербуке
