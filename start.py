@@ -9,7 +9,7 @@ import subprocess
 import tomli
 
 from dragon_core.core import Core
-from dragon_core.receive_configuration import get_configuration_from_api, receive_configuration
+from dragon_core.receive_configuration import receive_configuration
 
 # проверяю запущен ли aeron media driver
 if subprocess.run('ps -A | grep aeron', shell=True, stdout=None).returncode != 0 and \
