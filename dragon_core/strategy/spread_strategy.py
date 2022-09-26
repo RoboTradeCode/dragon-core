@@ -312,6 +312,7 @@ class SpreadStrategy(object):
         команды отмены
         """
         commands = []
+        order_ids_to_del = []
         for client_order_id, order in exchange_for_limit_order.limit_orders.items():
             if not self.check_order_to_actual(exchange_for_limit_order=exchange_for_limit_order,
                                               exchange_for_market_order=exchange_for_market_order,
@@ -324,6 +325,9 @@ class SpreadStrategy(object):
                     symbol=order['symbol'],
                     client_order_id=order['client_order_id']
                 ))
+                order_ids_to_del.append(client_order_id)
+        for client_order_id in order_ids_to_del:
+            del exchange_for_limit_order.limit_orders[client_order_id]
         return commands
 
     def check_order_to_actual(self,
