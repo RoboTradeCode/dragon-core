@@ -345,23 +345,29 @@ class SpreadStrategy(object):
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_buy(quote_amount, orderbook_of_exchange_for_limit_order)
                 if order_price / predict_price < self.min_profit:
+                    logger.debug('Order not actual: profit is down')
                     return False
                 # проверка на достаточный баланс для совершения завершающей сделки
                 if quote_amount - filled_amount < get_balance_quote_asset(exchange_for_market_order, symbol):
+                    logger.debug('Order not actual: insufficient funds to complete trade')
                     return False
                 # проверка на уход вглубь ордербука`
                 if orderbook_of_exchange_for_limit_order[symbol]['bids'][0][0] / order_price > self.depth_limit:
+                    logger.debug('Order not actual: order deep into the orderbook')
                     return False
             else:
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_sell(base_amount, orderbook_of_exchange_for_market_order)
                 if predict_price / order_price < self.min_profit:
+                    logger.debug('Order not actual: profit is down')
                     return False
                 # проверка на достаточный баланс для совершения завершающей сделки
                 if quote_amount - filled_amount < get_balance_base_asset(exchange_for_market_order, symbol):
+                    logger.debug('Order not actual: insufficient funds to complete trade')
                     return False
                 # проверка на уход вглубь ордербука
                 if abs(order_price / orderbook_of_exchange_for_limit_order['asks'][0][0] - 1) > self.depth_limit:
+                    logger.debug('Order not actual: order deep into the orderbook')
                     return False
             return True
         else:
