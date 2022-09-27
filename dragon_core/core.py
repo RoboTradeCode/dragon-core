@@ -86,7 +86,8 @@ class Core(object):
         commands.append(get_balance_command_2)
         self.send_commands(commands)
 
-    def log(self, message: str = None, data: Any = None, event_id: str = None, exchange: str = None):
+    def log(self, message: str = None, data: Any = None, event_id: str = None, exchange: str = None,
+            action: str = None):
         """
         Отправить сообщение на лог сервер
         """
@@ -96,6 +97,7 @@ class Core(object):
         event['message'] = message
         event['data'] = data
         event['exchange'] = exchange
+        event['action'] = action
         logging.info(event)
         self.log_server.send(event)
 
@@ -127,8 +129,10 @@ class Core(object):
         orderbook = convert_orderbook_float_to_decimal(orderbook=message['data'])
         commands = self.strategy.update_orderbook(exchange_name=message['exchange'], orderbook=orderbook)
         if commands:
-            self.log(message=f'Current state', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name)
-            self.log(message=f'Current state', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name)
+            self.log(message=f'State', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name,
+                     action='mt_py_metrics')
+            self.log(message=f'State', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name,
+                     action='mt_py_metrics')
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
@@ -137,8 +141,10 @@ class Core(object):
             orders = [convert_order_float_to_decimal(order) for order in message['data']]
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
-                self.log(message=f'State', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name)
-                self.log(message=f'State', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name)
+                self.log(message=f'State', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name,
+                     action='mt_py_metrics')
+                self.log(message=f'State', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name,
+                     action='mt_py_metrics')
                 self.send_commands(commands)
         else:
             # todo временное решение, чтобы не засорять логи этими сообщениями от гейта
