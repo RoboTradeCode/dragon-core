@@ -344,9 +344,10 @@ class SpreadStrategy(object):
             if order['side'] == 'sell':
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_buy(quote_amount, orderbook_of_exchange_for_limit_order)
-                if order_price / predict_price < self.min_profit:
-                    logger.debug('Order not actual: profit is down')
-                    return False
+                profit = predict_price / order_price
+                if predict_price / order_price < self.min_profit:
+                    logger.debug(f'Order not actual: profit is down: '
+                                 f'{to_percent_from_coef(profit)}% < {to_percent_from_coef(self.min_profit)}%')
                 # проверка на достаточный баланс для совершения завершающей сделки
                 if quote_amount - filled_amount < get_balance_quote_asset(exchange_for_market_order, symbol):
                     logger.debug('Order not actual: insufficient funds to complete trade')
@@ -358,8 +359,10 @@ class SpreadStrategy(object):
             else:
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_sell(base_amount, orderbook_of_exchange_for_market_order)
+                profit = predict_price / order_price
                 if predict_price / order_price < self.min_profit:
-                    logger.debug('Order not actual: profit is down')
+                    logger.debug(f'Order not actual: profit is down: '
+                                 f'{to_percent_from_coef(profit)}% < {to_percent_from_coef(self.min_profit)}%')
                     return False
                 # проверка на достаточный баланс для совершения завершающей сделки
                 if quote_amount - filled_amount < get_balance_base_asset(exchange_for_market_order, symbol):
