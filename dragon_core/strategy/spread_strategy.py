@@ -45,7 +45,7 @@ class SpreadStrategy(object):
     min_profit: Decimal
     balance_part_to_use: Decimal
     depth_limit: Decimal
-    order_amount_coefficient: Decimal
+    volatility_compensation: Decimal
 
     exchange_1: ExchangeState
     exchange_2: ExchangeState
