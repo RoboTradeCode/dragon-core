@@ -6,7 +6,7 @@ from typing import Any
 
 from dragon_core.gate import Gate
 from dragon_core.log_server import LogServer
-from dragon_core.strategy.spread_strategy import SpreadStrategy
+from dragon_core.strategy.spread_strategy import SpreadStrategy, SpreadStrategyConfig
 from dragon_core.utils import time_us, convert_orderbook_float_to_decimal, convert_balance_float_to_decimal, \
     convert_order_float_to_decimal
 
@@ -36,9 +36,12 @@ class Core(object):
             balances_handler=self.handle_balances
         )
         self.strategy = SpreadStrategy(
-            min_profit=Decimal(core_config['strategy']['min_profit']),
-            balance_part_to_use=Decimal(core_config['strategy']['balance_part_to_use']),
-            depth_limit=Decimal(core_config['strategy']['depth_limit']),
+            config=SpreadStrategyConfig(
+                min_profit=Decimal(core_config['strategy']['min_profit']),
+                balance_part_to_use=Decimal(core_config['strategy']['balance_part_to_use']),
+                depth_limit=Decimal(core_config['strategy']['depth_limit']),
+                volatility_compensation=Decimal(core_config['strategy']['volatility_compensation']),
+            ),
             exchange_1_name=self.exchange_1_name,
             exchange_2_name=self.exchange_2_name
         )

@@ -2,25 +2,31 @@ import time
 from decimal import Decimal
 from unittest import TestCase
 
-from dragon_core.strategy.spread_strategy import SpreadStrategy
+from dragon_core.strategy.spread_strategy import SpreadStrategy, SpreadStrategyConfig
 from dragon_core.utils import time_us
 
 
 class TestSpreadStrategy(TestCase):
     def test_strategy_creating(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('25'),
-            depth_limit=Decimal('10'),
+            config=SpreadStrategyConfig(
+                min_profit=Decimal('5'),
+                balance_part_to_use=Decimal('25'),
+                depth_limit=Decimal('10'),
+                volatility_compensation=Decimal('1')
+            ),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
 
     def test_strategy_update_orderbook(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('25'),
-            depth_limit=Decimal('10'),
+            config=SpreadStrategyConfig(
+                min_profit=Decimal('5'),
+                balance_part_to_use=Decimal('25'),
+                depth_limit=Decimal('10'),
+                volatility_compensation=Decimal('1')
+            ),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -45,9 +51,12 @@ class TestSpreadStrategy(TestCase):
 
     def test_limit_order_creating(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('25'),
-            depth_limit=Decimal('10'),
+            config=SpreadStrategyConfig(
+                min_profit=Decimal('5'),
+                balance_part_to_use=Decimal('25'),
+                depth_limit=Decimal('10'),
+                volatility_compensation=Decimal('1')
+            ),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -102,9 +111,12 @@ class TestSpreadStrategy(TestCase):
 
     def test_cancel_orders(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('25'),
-            depth_limit=Decimal('10'),
+            SpreadStrategyConfig(
+                min_profit=Decimal('5'),
+                balance_part_to_use=Decimal('25'),
+                depth_limit=Decimal('10'),
+                volatility_compensation=Decimal('1')
+            ),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )
@@ -159,9 +171,12 @@ class TestSpreadStrategy(TestCase):
 
     def test_market_order(self):
         strategy = SpreadStrategy(
-            min_profit=Decimal('5'),
-            balance_part_to_use=Decimal('25'),
-            depth_limit=Decimal('10'),
+            config=SpreadStrategyConfig(
+                min_profit=Decimal('5'),
+                balance_part_to_use=Decimal('25'),
+                depth_limit=Decimal('10'),
+                volatility_compensation=Decimal('1')
+            ),
             exchange_1_name='binance',
             exchange_2_name='exmo'
         )

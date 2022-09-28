@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import uuid
 from decimal import Decimal
@@ -41,6 +42,14 @@ def to_percent_from_coef(profit):
     return profit * 100 - 100
 
 
+@dataclasses.dataclass
+class SpreadStrategyConfig(object):
+    min_profit: Decimal
+    balance_part_to_use: Decimal
+    depth_limit: Decimal
+    volatility_compensation: Decimal
+
+
 class SpreadStrategy(object):
     min_profit: Decimal
     balance_part_to_use: Decimal
@@ -51,22 +60,14 @@ class SpreadStrategy(object):
     exchange_2: ExchangeState
 
     def __init__(self,
-                 min_profit: Decimal,
-                 balance_part_to_use: Decimal,
-                 depth_limit: Decimal,
-                 volatility_compensation: Decimal,
+                 config: SpreadStrategyConfig,
                  exchange_1_name,
                  exchange_2_name):
-        """
-        :param min_profit: минимальный желаемый доход (в процентах, например 2.5, 10, 1000)
-        :param balance_part_to_use: какая часть от доступного баланса будет использоваться (в процентах)
-        :param depth_limit: коэффициент изменения цены для “углубление” ордера в ордербук (в процентах)
-        """
         # перевожу в коэффициент для удобного использования
-        self.min_profit = min_profit / 100 + 1
-        self.balance_part_to_use = balance_part_to_use / 100
-        self.depth_limit = depth_limit / 100 + 1
-        self.volatility_compensation = volatility_compensation / 100
+        self.min_profit = config.min_profit / 100 + 1
+        self.balance_part_to_use = config.balance_part_to_use / 100
+        self.depth_limit = config.depth_limit / 100 + 1
+        self.volatility_compensation = config.volatility_compensation / 100
 
         self.exchange_1 = ExchangeState(name=exchange_1_name, limit_orders={}, orderbook={}, core_orders={})
         self.exchange_2 = ExchangeState(name=exchange_2_name, limit_orders={}, orderbook={}, core_orders={})
