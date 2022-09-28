@@ -211,7 +211,8 @@
                 "strategy": {
                     "min_profit": 5,
                     "balance_part_to_use": 25,
-                    "depth_limit": 2
+                    "depth_limit": 2,
+                    "volatility_compensation": 0.4
                 },
                 "exchanges": [
                     {

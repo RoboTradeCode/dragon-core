@@ -54,6 +54,7 @@ class SpreadStrategy(object):
                  min_profit: Decimal,
                  balance_part_to_use: Decimal,
                  depth_limit: Decimal,
+                 volatility_compensation: Decimal,
                  exchange_1_name,
                  exchange_2_name):
         """
@@ -65,6 +66,7 @@ class SpreadStrategy(object):
         self.min_profit = min_profit / 100 + 1
         self.balance_part_to_use = balance_part_to_use / 100
         self.depth_limit = depth_limit / 100 + 1
+        self.volatility_compensation = volatility_compensation / 100
 
         self.exchange_1 = ExchangeState(name=exchange_1_name, limit_orders={}, orderbook={}, core_orders={})
         self.exchange_2 = ExchangeState(name=exchange_2_name, limit_orders={}, orderbook={}, core_orders={})
@@ -345,7 +347,7 @@ class SpreadStrategy(object):
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_buy(quote_amount, orderbook_of_exchange_for_limit_order)
                 profit = predict_price / order_price
-                if predict_price / order_price < self.min_profit:
+                if profit + self.volatility_compensation < self.min_profit:
                     logger.debug(f'Order not actual: profit is down: '
                                  f'{to_percent_from_coef(profit)}% < {to_percent_from_coef(self.min_profit)}%')
                 # проверка на достаточный баланс для совершения завершающей сделки
@@ -360,7 +362,7 @@ class SpreadStrategy(object):
                 # проверка, что сделка выгодная
                 predict_price = predict_price_of_market_sell(base_amount, orderbook_of_exchange_for_market_order)
                 profit = predict_price / order_price
-                if predict_price / order_price < self.min_profit:
+                if profit + self.volatility_compensation < self.min_profit:
                     logger.debug(f'Order not actual: profit is down: '
                                  f'{to_percent_from_coef(profit)}% < {to_percent_from_coef(self.min_profit)}%')
                     return False
