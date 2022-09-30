@@ -56,6 +56,14 @@ class SpreadStrategyConfig(object):
     volatility_compensation: Decimal
 
 
+def set_balances(balances, exchange):
+    if not exchange.balance:
+        exchange.balance = balances
+    for asset, balance in balances['assets'].items():
+        exchange.balance['assets'][asset] = balance
+    exchange.balance['timestamp'] = balances['assets'].get('timestamp')
+
+
 class SpreadStrategy(object):
     min_profit: Decimal
     balance_part_to_use: Decimal
@@ -75,8 +83,8 @@ class SpreadStrategy(object):
         self.depth_limit = config.depth_limit / 100 + 1
         self.volatility_compensation = config.volatility_compensation / 100
 
-        self.exchange_1 = ExchangeState(name=exchange_1_name, limit_orders={}, orderbook={}, core_orders={})
-        self.exchange_2 = ExchangeState(name=exchange_2_name, limit_orders={}, orderbook={}, core_orders={})
+        self.exchange_1 = ExchangeState(name=exchange_1_name, limit_orders={}, orderbook={}, core_orders={}, balance={})
+        self.exchange_2 = ExchangeState(name=exchange_2_name, limit_orders={}, orderbook={}, core_orders={}, balance={})
 
     def update_orderbook(self, exchange_name: str, orderbook: dict) -> list:
         """
@@ -136,11 +144,10 @@ class SpreadStrategy(object):
         if balances is not None and balances.get('assets') is not None and balances['assets']:
             match exchange_name:
                 case self.exchange_1.name:
-                    for asset, balance in balances:
-                        self.exchange_1.balance[asset] = balance
+                    set_balances(balances, self.exchange_1)
                 case self.exchange_2.name:
-                    for asset, balance in balances:
-                        self.exchange_1.balance[asset] = balance
+                    set_balances(balances, self.exchange_2)
+
         else:
             logger.warning(f'Invalid balances: {balances}')
         return commands
