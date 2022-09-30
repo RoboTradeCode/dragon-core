@@ -127,11 +127,14 @@ class SpreadStrategy(object):
         Обновить балансы на бирже
         """
         commands = []
-        match exchange_name:
-            case self.exchange_1.name:
-                self.exchange_1.balance = balances
-            case self.exchange_2.name:
-                self.exchange_2.balance = balances
+        if balances is not None and balances.get('assets') is not None and balances['assets']:
+            match exchange_name:
+                case self.exchange_1.name:
+                    self.exchange_1.balance = balances
+                case self.exchange_2.name:
+                    self.exchange_2.balance = balances
+        else:
+            logger.warning(f'Invalid balances: {balances}')
         return commands
 
     def monitor_orders(self, exchange_for_limit_order: ExchangeState, exchange_for_market_order: ExchangeState):
