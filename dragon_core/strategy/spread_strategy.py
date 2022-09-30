@@ -18,7 +18,7 @@ def get_balance_base_asset(exchange_state, symbol):
         free_balance = Decimal(str(balance['free']))
         return free_balance
     else:
-        logger.warning(f'Incomplete balance: {balance}')
+        logger.warning(f'Incomplete balance: {exchange_state}')
         return Decimal('0')
 
 
@@ -30,7 +30,7 @@ def get_balance_quote_asset(exchange_state, symbol):
         free_balance = Decimal(str(balance['free']))
         return free_balance
     else:
-        logger.warning(f'Incomplete balance: {balance}')
+        logger.warning(f'Incomplete balance: {exchange_state}')
         return Decimal('0')
 
 
@@ -136,9 +136,11 @@ class SpreadStrategy(object):
         if balances is not None and balances.get('assets') is not None and balances['assets']:
             match exchange_name:
                 case self.exchange_1.name:
-                    self.exchange_1.balance = balances
+                    for asset, balance in balances:
+                        self.exchange_1.balance[asset] = balance
                 case self.exchange_2.name:
-                    self.exchange_2.balance = balances
+                    for asset, balance in balances:
+                        self.exchange_1.balance[asset] = balance
         else:
             logger.warning(f'Invalid balances: {balances}')
         return commands
