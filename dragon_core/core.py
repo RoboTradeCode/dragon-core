@@ -139,21 +139,23 @@ class Core(object):
             self.send_commands(commands)
 
     def handle_orders(self, message: dict):
-        if message['event'] in ['data']:
+        if message.get('event') == 'data':
             logger.debug(f'Received orders: {message}')
             orders = [convert_order_float_to_decimal(order) for order in message['data']]
             commands = self.strategy.update_orders(exchange_name=message['exchange'], orders=orders)
             if commands:
                 self.log(message=f'State', data=self.strategy.exchange_1.to_dict(), exchange=self.exchange_1_name,
-                     action='mt_py_metrics')
+                         action='mt_py_metrics')
                 self.log(message=f'State', data=self.strategy.exchange_2.to_dict(), exchange=self.exchange_2_name,
-                     action='mt_py_metrics')
+                         action='mt_py_metrics')
                 self.send_commands(commands)
-        else:
+        elif message.get('event') == 'error':
             # todo временное решение, чтобы не засорять логи этими сообщениями от гейта
             if message.get('message') in ["'NoneType' object has no attribute 'assets'",
                                           "'NoneType' object is not iterable"]:
                 return
+            logger.warning(f'Receiver error: {message}')
+        else:
             logger.warning(f'Received unspecified message: {message}')
 
     def handle_balances(self, message: dict):
