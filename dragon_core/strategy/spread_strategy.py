@@ -14,18 +14,24 @@ def get_balance_base_asset(exchange_state, symbol):
     """
     Получает баланс базового ассета
     """
-    balance = exchange_state.balance['assets'].get(symbol.split('/')[0])
-    free_balance = Decimal(str(balance['free']))
-    return free_balance
+    if balance := exchange_state.balance['assets'].get(symbol.split('/')[0]):
+        free_balance = Decimal(str(balance['free']))
+        return free_balance
+    else:
+        logger.warning(f'Incomplete balance: {balance}')
+        return Decimal('0')
 
 
 def get_balance_quote_asset(exchange_state, symbol):
     """
     Получает баланс котируемого ассета
     """
-    balance = exchange_state.balance['assets'].get(symbol.split('/')[1])
-    free_balance = Decimal(str(balance['free']))
-    return free_balance
+    if balance := exchange_state.balance['assets'].get(symbol.split('/')[1]):
+        free_balance = Decimal(str(balance['free']))
+        return free_balance
+    else:
+        logger.warning(f'Incomplete balance: {balance}')
+        return Decimal('0')
 
 
 def calculate_profit(base_amount, buy_price, sell_price):
