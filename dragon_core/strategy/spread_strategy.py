@@ -218,7 +218,11 @@ class SpreadStrategy(object):
         limit_order_price = exchange_to_limit.orderbook[symbol]['bids'][0][0]
 
         # получаю объем, который могу использовать для совершения ордеров на двух биржах
-        amount_in_base_token = self.get_available_amount_to_buy_first(exchange_to_limit, exchange_to_market, symbol)
+        amount_in_base_token = self.get_available_amount_to_buy_first(
+            exchange_to_limit=exchange_to_limit,
+            exchange_to_market=exchange_to_market,
+            symbol=symbol
+        )
 
         # получаю цену исполнения маркет-ордера в текущем ордербуке
         market_order_price = predict_price_of_market_sell(amount_in_base_token, exchange_to_market.orderbook[symbol])
@@ -388,12 +392,16 @@ class SpreadStrategy(object):
         ордер на бирже exchange_to_limit и маркет ордер на exchange_to_market.
         Функция возвращает объем с учетом balance_part_to_use.
         """
+        amount_for_market_buy = get_balance_quote_asset(exchange_to_limit, symbol)
         # Получаю цену, по которой будет исполнен маркет ордер
-        limit_order_price = exchange_to_limit.orderbook[symbol]['asks'][0][0]
-        # получаю баланс на бирже, на которой буду выставлять лимит ордер (quote - в паре BTC/USDT это USDT)
-        amount_in_exchange_to_limit = get_balance_quote_asset(exchange_to_limit, symbol) / limit_order_price
+        market_order_price = predict_price_of_market_buy(
+            quote_asset_amount=amount_for_market_buy,
+            orderbook=exchange_to_market.orderbook[symbol]
+        )
         # получаю баланс на бирже, на которой буду выставлять маркет ордер
-        amount_in_exchange_to_market = get_balance_base_asset(exchange_to_limit, symbol)
+        amount_in_exchange_to_market = amount_for_market_buy / market_order_price
+        # получаю баланс на бирже, на которой буду выставлять лимит ордер
+        amount_in_exchange_to_limit = get_balance_base_asset(exchange_to_limit, symbol)
 
         min_amount = min(amount_in_exchange_to_market, amount_in_exchange_to_limit) * self.balance_part_to_use
         return min_amount
@@ -406,13 +414,13 @@ class SpreadStrategy(object):
         Функция возвращает объем с учетом balance_part_to_use.
         """
         # получаю баланс на бирже, на которой буду выставлять лимит ордер (quote token - в паре BTC/USDT это USDT)
-        amount_in_quote_token = get_balance_quote_asset(exchange_to_market, symbol)
-        # получаю цену, по которой будет совершен маркет ордер
-        predict_price = predict_price_of_market_buy(amount_in_quote_token, exchange_to_market.orderbook[symbol])
+        amount_in_quote_token = get_balance_quote_asset(exchange_to_limit, symbol)
+        # получаю цену, по которой будет совершен limit ордер
+        price = exchange_to_limit.orderbook[symbol]['bids'][0][0]
         # перевожу из котируемого токена в базовый, чтобы сравнивать два баланса
-        amount_in_exchange_to_market = amount_in_quote_token / predict_price
+        amount_in_exchange_to_limit = amount_in_quote_token / price
         # получаю баланс базового токена для совершения продажи
-        amount_in_exchange_to_limit = get_balance_base_asset(exchange_to_limit, symbol)
+        amount_in_exchange_to_market = get_balance_base_asset(exchange_to_market, symbol)
 
         min_amount = min(amount_in_exchange_to_market, amount_in_exchange_to_limit) * self.balance_part_to_use
         return min_amount
