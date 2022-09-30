@@ -8,6 +8,8 @@ def predict_price_of_market_sell(base_asset_amount: Decimal, orderbook: dict):
     :param orderbook: текущий ордербук;
     :return: ожидаемая средняя цена исполнения ордера.
     """
+    if base_asset_amount < Decimal(str(orderbook['bids'][0][1])):
+        return Decimal(str(orderbook['bids'][0][0]))
     filled_amount_in_base_asset = Decimal('0')
     filled_amount_in_quote_asset = Decimal('0')
     for bid in orderbook['bids']:
@@ -33,8 +35,10 @@ def predict_price_of_market_buy(quote_asset_amount: Decimal, orderbook: dict) ->
     :param orderbook: текущий ордербук;
     :return: ожидаемая средняя цена исполнения ордера.
     """
-    filled_amount_in_base_asset = 0
-    filled_amount_in_quote_asset = 0
+    if quote_asset_amount < Decimal(str(orderbook['asks'][0][1])):
+        return Decimal(str(orderbook['asks'][0][0]))
+    filled_amount_in_base_asset = Decimal('0')
+    filled_amount_in_quote_asset = Decimal('0')
     for ask in orderbook['asks']:
         ask_price = Decimal(str(ask[0]))
         ask_amount = Decimal(str(ask[1]))
