@@ -154,7 +154,7 @@ class Core(object):
             if message.get('message') in ["'NoneType' object has no attribute 'assets'",
                                           "'NoneType' object is not iterable"]:
                 return
-            logger.warning(f'Receiver error: {message}')
+            logger.warning(f'Received error: {message}')
         else:
             logger.warning(f'Received unspecified message: {message}')
 
